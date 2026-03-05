@@ -1,0 +1,7 @@
+project_id = "jmplqbhbwiftglwepmfx"
+
+[functions.nexora-chat]
+verify_jwt = false
+
+[functions.prospect-search]
+verify_jwt = false
