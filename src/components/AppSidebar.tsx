@@ -17,6 +17,7 @@ import {
   Sun,
   LogOut,
   Calendar,
+  ShieldCheck,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
@@ -51,7 +52,7 @@ interface MenuItem {
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const { signOut, user } = useAuth();
+  const { signOut, user, isAdmin } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [leadCount, setLeadCount] = useState(0);
@@ -93,6 +94,10 @@ export function AppSidebar() {
     { title: "Área de Estudos", url: "/area-de-estudos", icon: BookOpen },
     { title: "Suporte", url: "/suporte", icon: LifeBuoy },
     { title: "Configurações", url: "/configuracoes", icon: Settings },
+  ];
+
+  const adminItems: MenuItem[] = [
+    { title: "Painel Admin", url: "/admin", icon: ShieldCheck },
   ];
 
   const renderMenuItems = (items: MenuItem[]) =>
@@ -154,6 +159,13 @@ export function AppSidebar() {
           <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-3 mb-1">Growth</SidebarGroupLabel>
           <SidebarGroupContent><SidebarMenu>{renderMenuItems(growthItems)}</SidebarMenu></SidebarGroupContent>
         </SidebarGroup>
+
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-3 mb-1">Administração</SidebarGroupLabel>
+            <SidebarGroupContent><SidebarMenu>{renderMenuItems(adminItems)}</SidebarMenu></SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         <SidebarGroup>
           <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-3 mb-1">Suporte</SidebarGroupLabel>

@@ -126,7 +126,7 @@ const Index = () => {
         animate="visible"
       >
         <motion.div variants={itemVariants}>
-          <h1 className="text-2xl font-bold text-foreground">{getGreeting()}</h1>
+          <h1 className="text-2xl font-bold text-foreground">Nexora Pro 🚀</h1>
           <p className="text-muted-foreground text-sm mt-1">
             Bem-vindo ao Nexora! Seu dashboard local está pronto. 🚀
           </p>

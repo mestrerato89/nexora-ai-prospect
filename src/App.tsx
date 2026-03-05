@@ -25,6 +25,7 @@ import AreaEstudos from "./pages/AreaEstudos";
 import Suporte from "./pages/Suporte";
 import Agenda from "./pages/Agenda";
 import Configuracoes from "./pages/Configuracoes";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -61,6 +62,7 @@ const App = () => (
               <Route path="/suporte" element={<P><Suporte /></P>} />
               <Route path="/agenda" element={<P><Agenda /></P>} />
               <Route path="/configuracoes" element={<P><Configuracoes /></P>} />
+              <Route path="/admin" element={<P><Admin /></P>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>
