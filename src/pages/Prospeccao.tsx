@@ -65,8 +65,8 @@ export default function Prospeccao() {
 
       const sourceLabel =
         response.source === "google" ? "Google API Pro (Oficial)" :
-          response.source === "scraper" ? "Google Maps (Local)" :
-            "IA (Dados estimadas)";
+          response.source === "scraper" ? "Buscador Local (Gratuito)" :
+            "IA Gemini (Backup)";
       toast.success(`${response.results.length} empresas via ${sourceLabel}!`);
     } catch (err: any) {
       setStatus("error");
