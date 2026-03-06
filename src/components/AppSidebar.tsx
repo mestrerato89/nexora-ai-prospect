@@ -18,6 +18,7 @@ import {
   LogOut,
   Calendar,
   ShieldCheck,
+  DollarSign,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useNavigate } from "react-router-dom";
@@ -98,6 +99,7 @@ export function AppSidebar() {
 
   const adminItems: MenuItem[] = [
     { title: "Painel Admin", url: "/admin", icon: ShieldCheck },
+    { title: "Gestão Financeira", url: "/financeiro", icon: DollarSign },
   ];
 
   const renderMenuItems = (items: MenuItem[]) =>

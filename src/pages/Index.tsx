@@ -22,7 +22,7 @@ export interface DashboardData {
   totalLeads: number;
   leadsQuentes: number;
   contatados: number;
-  fechados: number;
+  pagos: number;
   perdidos: number;
   novos: number;
   proposta: number;
@@ -39,7 +39,7 @@ export interface DashboardData {
 const Index = () => {
   const { user } = useAuth();
   const [data, setData] = useState<DashboardData>({
-    totalLeads: 0, leadsQuentes: 0, contatados: 0, fechados: 0, perdidos: 0,
+    totalLeads: 0, leadsQuentes: 0, contatados: 0, pagos: 0, perdidos: 0,
     novos: 0, proposta: 0,
     withPhone: 0, withWebsite: 0, avgRating: "—", pendingFollowUps: 0,
     overdueFollowUps: 0, topNiches: [], followUpsList: [], leadsByDay: [],
@@ -90,7 +90,7 @@ const Index = () => {
         totalLeads: leads.length,
         leadsQuentes: leads.filter((l) => l.status === "contato").length,
         contatados: leads.filter((l) => l.status === "contato" || l.status === "proposta").length,
-        fechados: leads.filter((l) => l.status === "fechado").length,
+        pagos: leads.filter((l) => l.status === "pago").length,
         perdidos: leads.filter((l) => l.status === "perdido").length,
         novos, proposta,
         withPhone: leads.filter((l) => l.has_phone).length,

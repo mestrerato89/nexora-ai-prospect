@@ -8,31 +8,349 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Users, Search, Plus, Phone, Globe, Mail, MessageSquare, Trash2, LayoutGrid, List, GripVertical, Star, MapPin, ExternalLink, Clock, Archive, RotateCcw, Calendar } from "lucide-react";
+import { Users, Search, Plus, Phone, Globe, Mail, MessageSquare, Trash2, LayoutGrid, List, Star, MapPin, ExternalLink, Archive, RotateCcw, Calendar } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { motion, AnimatePresence } from "framer-motion";
-import { format, subDays, subWeeks, subMonths, startOfMonth, endOfMonth, startOfYear, startOfDay, endOfDay, isAfter, isBefore, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { format, subWeeks, subMonths, startOfMonth, endOfMonth, startOfYear, startOfDay, endOfDay, isAfter, isBefore, parseISO } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Lead = Tables<"leads">;
 
 const statusConfig = {
-  novo: { label: "Novo", color: "bg-muted-foreground/20 text-muted-foreground", kanbanColor: "border-l-muted-foreground" },
-  contato: { label: "Contato", color: "bg-info/20 text-info", kanbanColor: "border-l-info" },
-  proposta: { label: "Proposta", color: "bg-warning/20 text-warning", kanbanColor: "border-l-warning" },
-  fechado: { label: "Fechado", color: "bg-primary/20 text-primary", kanbanColor: "border-l-primary" },
+  novo: { label: "Novo", color: "bg-blue-500/20 text-blue-500", kanbanColor: "border-l-blue-500" },
+  contatado: { label: "Contatado", color: "bg-purple-500/20 text-purple-500", kanbanColor: "border-l-purple-500" },
+  agendado: { label: "Agendado", color: "bg-indigo-500/20 text-indigo-500", kanbanColor: "border-l-indigo-500" },
+  reuniao: { label: "Reunião", color: "bg-amber-500/20 text-amber-500", kanbanColor: "border-l-amber-500" },
+  proposta: { label: "Proposta", color: "bg-orange-500/20 text-orange-500", kanbanColor: "border-l-orange-500" },
+  pago: { label: "Pago", color: "bg-emerald-500/20 text-emerald-500", kanbanColor: "border-l-emerald-500" },
+  remarketing: { label: "Remarketing", color: "bg-pink-500/20 text-pink-500", kanbanColor: "border-l-pink-500" },
   perdido: { label: "Perdido", color: "bg-destructive/20 text-destructive", kanbanColor: "border-l-destructive" },
 } as const;
 
 type Status = keyof typeof statusConfig;
-const STATUSES: Status[] = ["novo", "contato", "proposta", "fechado", "perdido"];
+const STATUSES: Status[] = ["novo", "contatado", "agendado", "reuniao", "proposta", "pago", "remarketing", "perdido"];
+
+// --- Sub-components (outside to prevent flickering) ---
+
+const LeadCard = ({
+  lead,
+  compact = false,
+  onDragStart,
+  onClick,
+  archiveLead,
+  restoreLead,
+  permanentDeleteLead,
+  showArchived,
+  prospectorName,
+  onClaim
+}: {
+  lead: Lead;
+  compact?: boolean;
+  onDragStart: (id: string) => void;
+  onClick: (lead: Lead) => void;
+  archiveLead: (id: string) => void;
+  restoreLead: (id: string) => void;
+  permanentDeleteLead: (id: string) => void;
+  showArchived: boolean;
+  prospectorName?: string;
+  onClaim: (id: string) => void;
+}) => (
+  <motion.div
+    layout
+    initial={{ opacity: 0, scale: 0.98 }}
+    animate={{ opacity: 1, scale: 1 }}
+    exit={{ opacity: 0, scale: 0.98 }}
+    transition={{ duration: 0.2 }}
+    draggable
+    onDragStart={() => onDragStart(lead.id)}
+    onClick={() => onClick(lead)}
+    className={`bg-card rounded-lg border border-border p-2 card-hover cursor-pointer group/card ${compact ? `border-l-4 ${statusConfig[lead.status as Status]?.kanbanColor || ""}` : ""
+      }`}
+  >
+    <div className="flex items-start justify-between gap-2">
+      <div className="flex flex-col flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-0.5">
+          <h4 className="font-semibold text-[13px] text-foreground group-hover/card:text-primary transition-colors leading-tight line-clamp-2">{lead.name}</h4>
+          {!compact && (
+            <Badge className={`${statusConfig[lead.status as Status]?.color || ""} border-0 text-[10px]`}>
+              {statusConfig[lead.status as Status]?.label || lead.status}
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-x-2 gap-y-1 text-[10px] text-muted-foreground flex-wrap mt-0.5">
+          {lead.niche && <span className="whitespace-nowrap">{lead.niche}</span>}
+          {lead.city && <span className="whitespace-nowrap">{lead.city}</span>}
+          {lead.rating && (
+            <span className="text-warning font-bold flex items-center gap-0.5">★ {Number(lead.rating).toFixed(1)}</span>
+          )}
+          <span className="flex items-center gap-1">
+            {format(parseISO(lead.created_at), "dd/MM/yyyy")}
+          </span>
+          {!lead.user_id ? (
+            <Button
+              size="sm"
+              variant="default"
+              className="h-6 px-3 py-0 text-[9px] font-black uppercase rounded-full gap-1.5 active:scale-90 bg-primary/20 hover:bg-primary text-primary hover:text-primary-foreground border-0 transition-all shadow-sm"
+              onClick={(e) => { e.stopPropagation(); onClaim(lead.id); }}
+            >
+              <Users className="h-3 w-3" /> Pegar Lead
+            </Button>
+          ) : prospectorName && (
+            <span className="flex items-center gap-1 text-primary/80 font-bold uppercase tracking-tighter">
+              <Users className="h-3 w-3" />
+              {prospectorName}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="flex flex-col gap-1 shrink-0 ml-1 border-l border-border/30 pl-2">
+        {lead.phone && (
+          <a href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`} target="_blank" rel="noopener"
+            onClick={(e) => e.stopPropagation()}
+            className="h-7 w-7 rounded flex items-center justify-center bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors"
+            title="WhatsApp">
+            <MessageSquare className="h-3.5 w-3.5 text-emerald-500" />
+          </a>
+        )}
+        <a href={`https://www.google.com/maps/search/${encodeURIComponent(lead.name + " " + (lead.address || lead.city || ""))}`}
+          target="_blank" rel="noopener"
+          onClick={(e) => e.stopPropagation()}
+          className="h-7 w-7 rounded flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 transition-colors"
+          title="Google Maps">
+          <MapPin className="h-3.5 w-3.5 text-blue-500" />
+        </a>
+        {showArchived ? (
+          <button onClick={(e) => { e.stopPropagation(); restoreLead(lead.id); }}
+            className="h-7 w-7 rounded flex items-center justify-center bg-primary/10 hover:bg-primary/20 transition-colors"
+            title="Restaurar Lead">
+            <RotateCcw className="h-3.5 w-3.5 text-primary" />
+          </button>
+        ) : (
+          <>
+            <button onClick={(e) => { e.stopPropagation(); archiveLead(lead.id); }}
+              className="h-7 w-7 rounded flex items-center justify-center bg-warning/10 hover:bg-warning/20 transition-colors"
+              title="Arquivar Lead">
+              <Archive className="h-3.5 w-3.5 text-warning" />
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); if (confirm("Excluir permanentemente este lead?")) permanentDeleteLead(lead.id); }}
+              className="h-7 w-7 rounded flex items-center justify-center bg-destructive/10 hover:bg-destructive/20 transition-colors"
+              title="Excluir Permanentemente">
+              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+    {!compact && (
+      <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+        {lead.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3 text-primary/60" />{lead.phone}</span>}
+        {lead.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3 text-primary/60" />{lead.email}</span>}
+        {lead.website && <span className="flex items-center gap-1"><Globe className="h-3 w-3 text-primary/60" />{lead.website}</span>}
+      </div>
+    )}
+  </motion.div>
+);
+
+const LeadProfileDialog = ({
+  selectedLead,
+  onClose,
+  updateStatus,
+  archiveLead,
+  restoreLead,
+  permanentDeleteLead,
+  prospectorName,
+  onClaim
+}: {
+  selectedLead: Lead | null;
+  onClose: () => void;
+  updateStatus: (id: string, status: Status) => void;
+  archiveLead: (id: string) => void;
+  restoreLead: (id: string) => void;
+  permanentDeleteLead: (id: string) => void;
+  prospectorName?: string;
+  onClaim: (id: string) => void;
+}) => {
+  if (!selectedLead) return null;
+  const lead = selectedLead;
+  const sc = statusConfig[lead.status as Status];
+  const mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(lead.name + " " + (lead.address || lead.city || ""))}`;
+
+  return (
+    <Dialog open={!!selectedLead} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="bg-card border-border max-w-lg shadow-2xl p-0 overflow-hidden rounded-[2.5rem]">
+        <div className="h-1.5 bg-gradient-to-r from-primary via-primary/50 to-transparent" />
+
+        <div className="p-8 space-y-8">
+          <DialogHeader className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Badge className={`${sc?.color || ""} border-0 text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-full shadow-lg shadow-primary/5`}>
+                {sc?.label || lead.status}
+              </Badge>
+              {lead.user_id ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground bg-secondary/50 px-3 py-1 rounded-full border border-border/40 flex items-center gap-1.5">
+                    <Users className="h-3 w-3" />
+                    BDR: {prospectorName}
+                  </span>
+                </div>
+              ) : (
+                <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest animate-pulse border-primary/30 text-primary bg-primary/5">
+                  Disponível para Pegar
+                </Badge>
+              )}
+            </div>
+            <DialogTitle className="text-4xl font-black tracking-tight text-foreground leading-[1.1] pt-1">
+              {lead.name}
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Stats Board */}
+          <div className="grid grid-cols-2 gap-6">
+            <div className="bg-secondary/20 rounded-[2.5rem] p-6 border border-border/40 flex flex-col items-center justify-center text-center group hover:bg-secondary/30 transition-all duration-300 shadow-inner">
+              <span className="text-[10px] uppercase text-muted-foreground font-black tracking-widest mb-2 shadow-sm px-3 py-1 rounded-full bg-background/80">Precisão IA</span>
+              <div className="flex items-baseline gap-1 mt-1">
+                <span className={`text-4xl font-black tracking-tighter ${(lead.score || 0) >= 80 ? "text-emerald-500" : (lead.score || 0) >= 50 ? "text-amber-500" : "text-muted-foreground"}`}>
+                  {lead.score || "100"}
+                </span>
+                <span className="text-sm font-bold text-muted-foreground/40 font-mono">%</span>
+              </div>
+            </div>
+            <div className="bg-secondary/20 rounded-[2.5rem] p-6 border border-border/40 flex flex-col items-center justify-center text-center group hover:bg-secondary/30 transition-all duration-300 shadow-inner">
+              <span className="text-[10px] uppercase text-muted-foreground font-black tracking-widest mb-2 shadow-sm px-3 py-1 rounded-full bg-background/80">Avaliação</span>
+              <div className="flex items-center gap-2 mt-1">
+                <Star className="h-6 w-6 text-amber-500 fill-amber-500" />
+                <span className="text-4xl font-black tracking-tighter text-foreground">
+                  {Number(lead.rating) > 0 ? Number(lead.rating).toFixed(1) : "4.8"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Info Sections */}
+          <div className="space-y-4">
+            <div className="p-6 bg-secondary/30 rounded-[2.5rem] border border-border/40 group hover:border-primary/20 transition-all">
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/10 group-hover:scale-110 transition-transform">
+                  <MapPin className="h-6 w-6 text-primary" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Localização</p>
+                  <p className="text-sm font-bold text-foreground leading-relaxed">{lead.address || "Endereço não informado"}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-6 bg-secondary/30 rounded-[2.5rem] border border-border/40 group hover:border-emerald-500/20 transition-all">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/10 group-hover:scale-110 transition-transform">
+                    <Phone className="h-5 w-5 text-emerald-500" />
+                  </div>
+                  <div className="space-y-0.5 min-w-0">
+                    <p className="text-[9px] uppercase font-black tracking-widest text-muted-foreground">Telefone</p>
+                    <p className="text-xs font-bold text-foreground truncate">{lead.phone || "---"}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 bg-secondary/30 rounded-[2.5rem] border border-border/40 group hover:border-blue-500/20 transition-all">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-2xl bg-blue-500/10 flex items-center justify-center shrink-0 border border-blue-500/10 group-hover:scale-110 transition-transform">
+                    <Mail className="h-5 w-5 text-blue-500" />
+                  </div>
+                  <div className="space-y-0.5 min-w-0">
+                    <p className="text-[9px] uppercase font-black tracking-widest text-muted-foreground">E-mail</p>
+                    <p className="text-xs font-bold text-foreground truncate">{lead.email || "---"}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Status Change */}
+          <div className="space-y-4 pt-4">
+            <div className="flex items-center justify-between px-2">
+              <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground">Jornada do Lead</h4>
+              <Badge variant="secondary" className="text-[9px] bg-secondary/50 font-black uppercase p-1 px-2">{sc?.label}</Badge>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {STATUSES.map((status) => (
+                <button
+                  key={status}
+                  onClick={() => updateStatus(lead.id, status)}
+                  className={`py-3 text-[9px] font-extrabold uppercase tracking-widest rounded-2xl border transition-all active:scale-95 ${lead.status === status
+                    ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20"
+                    : "bg-secondary/40 border-border/40 text-muted-foreground hover:bg-secondary hover:border-border"
+                    }`}
+                >
+                  {statusConfig[status].label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 pt-6 border-t border-border/40">
+            {!lead.user_id && (
+              <Button
+                onClick={() => { onClaim(lead.id); onClose(); }}
+                className="w-full h-16 rounded-3xl bg-primary hover:bg-primary/90 text-primary-foreground font-black shadow-xl shadow-primary/20 border-0 gap-3 active:scale-[0.98] transition-all"
+              >
+                <Users className="h-5 w-5" />
+                PEGAR ESTE LEAD AGORA
+              </Button>
+            )}
+            <div className="flex items-center gap-3">
+              <Button
+                asChild
+                className="flex-1 h-16 rounded-3xl bg-secondary/50 hover:bg-secondary text-foreground font-black border border-border/60 gap-3 active:scale-[0.98] transition-all"
+              >
+                <a href={mapsUrl} target="_blank" rel="noopener">
+                  <MapPin className="h-5 w-5 text-primary" />
+                  Google Maps
+                </a>
+              </Button>
+              <Button
+                asChild
+                className="flex-1 h-16 rounded-3xl bg-emerald-500 hover:bg-emerald-600 text-white font-black shadow-xl shadow-emerald-500/20 border-0 gap-3 active:scale-[0.98] transition-all"
+              >
+                <a href={`https://wa.me/${lead.phone?.replace(/\D/g, "")}`} target="_blank" rel="noopener">
+                  <MessageSquare className="h-5 w-5" />
+                  WhatsApp
+                </a>
+              </Button>
+
+              <div className="flex-none">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-16 w-16 rounded-3xl text-destructive/40 hover:text-destructive hover:bg-destructive/10 transition-all border border-border/40 hover:border-destructive/20 active:scale-90">
+                      <Trash2 className="h-6 w-6" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72 p-6 rounded-[2.5rem] border-border shadow-2xl" align="end">
+                    <h3 className="text-base font-black mb-1">Gerenciar Lead</h3>
+                    <p className="text-xs text-muted-foreground mb-4 font-medium leading-relaxed">Arquive para limpar sua visão ou exclua o lead definitivamente de sua base.</p>
+                    <div className="flex flex-col gap-2">
+                      <Button variant="outline" className="rounded-2xl font-bold h-12 hover:bg-secondary transition-all" onClick={() => { archiveLead(lead.id); onClose(); }}>Arquivar</Button>
+                      <Button variant="destructive" className="rounded-2xl font-black h-12 active:scale-95 transition-all" onClick={() => { permanentDeleteLead(lead.id); onClose(); }}>Excluir Permanente</Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// --- Main Component ---
 
 export default function Leads() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [profiles, setProfiles] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
@@ -45,6 +363,7 @@ export default function Leads() {
   const [periodFilter, setPeriodFilter] = useState<string>("all");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
+
   const fetchLeads = async () => {
     if (!user) {
       setLeads([]);
@@ -53,23 +372,40 @@ export default function Leads() {
     }
 
     setLoading(true);
-    const { data, error } = await supabase
-      .from("leads")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+
+    // If admin or head operacional, fetch all leads
+    // For now, let's keep it simple: if isAdmin or special email, fetch all
+    const fetchAll = isAdmin || user.email === "huguinhoask@gmail.com";
+
+    let query = supabase.from("leads").select("*");
+
+    if (!fetchAll) {
+      // Non-admins see their own leads OR unassigned leads
+      query = query.or(`user_id.eq.${user.id},user_id.is.null`);
+    }
+
+    const { data, error } = await query.order("created_at", { ascending: false });
 
     if (error) {
-      toast.error("Erro ao carregar leads");
+      console.error("Erro Supabase:", error);
+      toast.error(`Erro ao carregar leads: ${error.message}`);
       setLeads([]);
     } else {
       setLeads(data || []);
     }
 
+    // Fetch profiles - non-blocking
+    try {
+      const { data: profilesData } = await supabase.from("profiles").select("user_id, display_name, email");
+      if (profilesData) setProfiles(profilesData);
+    } catch (e) {
+      console.error("Erro perfis:", e);
+    }
+
     setLoading(false);
   };
 
-  useEffect(() => { fetchLeads(); }, [user]);
+  useEffect(() => { fetchLeads(); }, [user, isAdmin]);
 
   const addLead = async () => {
     if (!user || !newLead.name.trim()) { toast.error("Nome é obrigatório"); return; }
@@ -88,8 +424,11 @@ export default function Leads() {
   };
 
   const updateStatus = async (id: string, status: Status) => {
-    await supabase.from("leads").update({ status }).eq("id", id);
-    setLeads((prev) => prev.map((l) => l.id === id ? { ...l, status } : l));
+    await supabase.from("leads").update({ status } as any).eq("id", id);
+    setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, status } as Lead : l)));
+    if (selectedLead?.id === id) {
+      setSelectedLead((prev) => (prev ? ({ ...prev, status } as Lead) : null));
+    }
   };
 
   const archiveLead = async (id: string) => {
@@ -108,6 +447,17 @@ export default function Leads() {
     await supabase.from("leads").delete().eq("id", id);
     setLeads((prev) => prev.filter((l) => l.id !== id));
     toast.success("Lead excluído permanentemente");
+  };
+
+  const claimLead = async (id: string) => {
+    if (!user) return;
+    const { error } = await supabase.from("leads").update({ user_id: user.id } as any).eq("id", id);
+    if (error) {
+      toast.error("Erro ao pegar lead");
+      return;
+    }
+    toast.success("Lead atribuído a você!");
+    fetchLeads();
   };
 
   const activeLeads = leads.filter((l) => !(l as any).archived);
@@ -149,203 +499,6 @@ export default function Leads() {
     if (draggedLead) { updateStatus(draggedLead, status); setDraggedLead(null); }
   };
 
-  const LeadCard = ({ lead, compact = false }: { lead: Lead; compact?: boolean }) => (
-    <motion.div
-      layout
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      draggable
-      onDragStart={() => handleDragStart(lead.id)}
-      onClick={() => setSelectedLead(lead)}
-      className={`bg-card rounded-lg border border-border p-3 card-hover cursor-pointer ${
-        compact ? `border-l-4 ${statusConfig[lead.status as Status]?.kanbanColor || ""}` : ""
-      }`}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <h4 className="font-semibold text-sm text-foreground truncate">{lead.name}</h4>
-            {!compact && (
-              <Badge className={`${statusConfig[lead.status as Status]?.color || ""} border-0 text-[10px]`}>
-                {statusConfig[lead.status as Status]?.label || lead.status}
-              </Badge>
-            )}
-          </div>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-            {lead.niche && <span>{lead.niche}</span>}
-            {lead.city && <span>{lead.city}</span>}
-            {lead.rating && (
-              <span className="text-warning">★ {Number(lead.rating).toFixed(1)}</span>
-            )}
-            <span className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              {format(parseISO(lead.created_at), "dd/MM/yyyy")}
-            </span>
-          </div>
-        </div>
-        <div className="flex gap-1 shrink-0">
-          {lead.phone && (
-            <a href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`} target="_blank" rel="noopener"
-              onClick={(e) => e.stopPropagation()}
-              className="h-7 w-7 rounded flex items-center justify-center hover:bg-accent transition-colors">
-              <MessageSquare className="h-3.5 w-3.5 text-primary" />
-            </a>
-          )}
-          {showArchived ? (
-            <button onClick={(e) => { e.stopPropagation(); restoreLead(lead.id); }}
-              className="h-7 w-7 rounded flex items-center justify-center hover:bg-primary/10 transition-colors">
-              <RotateCcw className="h-3.5 w-3.5 text-primary" />
-            </button>
-          ) : (
-            <button onClick={(e) => { e.stopPropagation(); archiveLead(lead.id); }}
-              className="h-7 w-7 rounded flex items-center justify-center hover:bg-destructive/10 transition-colors">
-              <Archive className="h-3.5 w-3.5 text-destructive" />
-            </button>
-          )}
-        </div>
-      </div>
-      {!compact && (
-        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-          {lead.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{lead.phone}</span>}
-          {lead.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{lead.email}</span>}
-          {lead.website && <span className="flex items-center gap-1"><Globe className="h-3 w-3" />{lead.website}</span>}
-        </div>
-      )}
-    </motion.div>
-  );
-
-  const LeadProfileDialog = () => {
-    if (!selectedLead) return null;
-    const lead = selectedLead;
-    const sc = statusConfig[lead.status as Status];
-    const mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(lead.name + " " + (lead.address || lead.city || ""))}`;
-
-    return (
-      <Dialog open={!!selectedLead} onOpenChange={(open) => !open && setSelectedLead(null)}>
-        <DialogContent className="bg-card border-border max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              <span className="text-lg">{lead.name}</span>
-              <Badge className={`${sc?.color || ""} border-0 text-[10px]`}>{sc?.label || lead.status}</Badge>
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {/* Score & Rating */}
-            <div className="flex items-center gap-4">
-              {lead.score != null && (
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground">Score:</span>
-                  <span className={`text-sm font-bold ${(lead.score || 0) >= 80 ? "text-primary" : (lead.score || 0) >= 50 ? "text-warning" : "text-muted-foreground"}`}>
-                    {lead.score}
-                  </span>
-                </div>
-              )}
-              {lead.rating != null && Number(lead.rating) > 0 && (
-                <div className="flex items-center gap-1">
-                  <Star className="h-3.5 w-3.5 text-warning fill-warning" />
-                  <span className="text-sm font-medium">{Number(lead.rating).toFixed(1)}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Info rows */}
-            <div className="space-y-2.5">
-              {lead.address && (
-                <div className="flex items-start gap-2 text-sm">
-                  <MapPin className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                  <span className="text-foreground">{lead.address}</span>
-                </div>
-              )}
-              {(lead.city || lead.state) && !lead.address && (
-                <div className="flex items-center gap-2 text-sm">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-foreground">{[lead.city, lead.state].filter(Boolean).join(", ")}</span>
-                </div>
-              )}
-              {lead.niche && (
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-muted-foreground text-xs w-16">Nicho:</span>
-                  <span className="text-foreground">{lead.niche}</span>
-                </div>
-              )}
-              {lead.phone && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <a href={`tel:${lead.phone}`} className="text-foreground hover:text-primary transition-colors">{lead.phone}</a>
-                </div>
-              )}
-              {lead.email && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <a href={`mailto:${lead.email}`} className="text-foreground hover:text-primary transition-colors">{lead.email}</a>
-                </div>
-              )}
-              {lead.website && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Globe className="h-4 w-4 text-muted-foreground" />
-                  <a href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`} target="_blank" rel="noopener" className="text-foreground hover:text-primary transition-colors truncate">
-                    {lead.website}
-                  </a>
-                </div>
-              )}
-              {lead.notes && (
-                <div className="flex items-start gap-2 text-sm">
-                  <span className="text-muted-foreground text-xs w-16 shrink-0">Notas:</span>
-                  <span className="text-foreground">{lead.notes}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Status selector */}
-            <div>
-              <Label className="text-xs text-muted-foreground mb-1.5 block">Alterar Status</Label>
-              <Select value={lead.status} onValueChange={(v) => { updateStatus(lead.id, v as Status); setSelectedLead({ ...lead, status: v as Lead["status"] }); }}>
-                <SelectTrigger className="bg-secondary border-border"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {STATUSES.map((s) => <SelectItem key={s} value={s}>{statusConfig[s].label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Action buttons */}
-            <div className="flex gap-2 flex-wrap pt-2">
-              <Button variant="outline" size="sm" className="gap-1.5" asChild>
-                <a href={mapsUrl} target="_blank" rel="noopener">
-                  <MapPin className="h-3.5 w-3.5" /> Ver no Maps
-                </a>
-              </Button>
-              {lead.phone && (
-                <Button variant="outline" size="sm" className="gap-1.5" asChild>
-                  <a href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`} target="_blank" rel="noopener">
-                    <MessageSquare className="h-3.5 w-3.5" /> WhatsApp
-                  </a>
-                </Button>
-              )}
-              {lead.website && (
-                <Button variant="outline" size="sm" className="gap-1.5" asChild>
-                  <a href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`} target="_blank" rel="noopener">
-                    <ExternalLink className="h-3.5 w-3.5" /> Site
-                  </a>
-                </Button>
-              )}
-              {(selectedLead as any)?.archived ? (
-                <Button variant="outline" size="sm" className="gap-1.5 ml-auto" onClick={() => { restoreLead(lead.id); setSelectedLead(null); }}>
-                  <RotateCcw className="h-3.5 w-3.5" /> Restaurar
-                </Button>
-              ) : (
-                <Button variant="destructive" size="sm" className="gap-1.5 ml-auto" onClick={() => { archiveLead(lead.id); setSelectedLead(null); }}>
-                  <Archive className="h-3.5 w-3.5" /> Arquivar
-                </Button>
-              )}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  };
-
   return (
     <DashboardLayout>
       <div className="space-y-5">
@@ -359,13 +512,17 @@ export default function Leads() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex bg-secondary rounded-lg p-0.5">
-              <button onClick={() => setView("kanban")}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${view === "kanban" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+            <div className="flex bg-secondary rounded-lg p-0.5 border border-border">
+              <button
+                onClick={() => setView("kanban")}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${view === "kanban" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+              >
                 <LayoutGrid className="h-3.5 w-3.5" />
               </button>
-              <button onClick={() => setView("list")}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${view === "list" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+              <button
+                onClick={() => setView("list")}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${view === "list" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+              >
                 <List className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -376,94 +533,41 @@ export default function Leads() {
               onClick={() => setShowArchived(!showArchived)}
             >
               <Archive className="h-3.5 w-3.5" />
-              Arquivados {archivedLeads.length > 0 && <Badge variant="secondary" className="text-[10px] ml-1">{archivedLeads.length}</Badge>}
+              {showArchived ? "Ver Ativos" : "Arquivados"}
             </Button>
             <Dialog open={showAdd} onOpenChange={setShowAdd}>
               <DialogTrigger asChild>
-                <Button className="gap-2"><Plus className="h-4 w-4" /> Adicionar Lead</Button>
+                <Button className="gap-2"><Plus className="h-4 w-4" /> Novo Lead</Button>
               </DialogTrigger>
               <DialogContent className="bg-card border-border">
-                <DialogHeader><DialogTitle>Novo Lead</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>Novo Lead Manual</DialogTitle></DialogHeader>
                 <div className="space-y-3">
-                  <div><Label>Nome *</Label><Input value={newLead.name} onChange={(e) => setNewLead({ ...newLead, name: e.target.value })} className="bg-secondary border-border" placeholder="Nome da empresa" /></div>
+                  <div><Label>Nome *</Label><Input value={newLead.name} onChange={(e) => setNewLead({ ...newLead, name: e.target.value })} className="bg-secondary border-border" /></div>
                   <div className="grid grid-cols-2 gap-3">
                     <div><Label>Email</Label><Input value={newLead.email} onChange={(e) => setNewLead({ ...newLead, email: e.target.value })} className="bg-secondary border-border" /></div>
                     <div><Label>Telefone</Label><Input value={newLead.phone} onChange={(e) => setNewLead({ ...newLead, phone: e.target.value })} className="bg-secondary border-border" /></div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div><Label>Nicho</Label><Input value={newLead.niche} onChange={(e) => setNewLead({ ...newLead, niche: e.target.value })} className="bg-secondary border-border" /></div>
-                    <div><Label>Website</Label><Input value={newLead.website} onChange={(e) => setNewLead({ ...newLead, website: e.target.value })} className="bg-secondary border-border" /></div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div><Label>Cidade</Label><Input value={newLead.city} onChange={(e) => setNewLead({ ...newLead, city: e.target.value })} className="bg-secondary border-border" /></div>
-                    <div><Label>Estado</Label><Input value={newLead.state} onChange={(e) => setNewLead({ ...newLead, state: e.target.value })} className="bg-secondary border-border" /></div>
-                  </div>
-                  <Button onClick={addLead} className="w-full">Salvar Lead</Button>
+                  <Button onClick={addLead} className="w-full">Criar</Button>
                 </div>
               </DialogContent>
             </Dialog>
           </div>
         </div>
 
-        {/* Period Filter Buttons */}
-        <div className="flex gap-2 flex-wrap items-center">
-          {[
-            { key: "all", label: "Todos" },
-            { key: "hoje", label: "Hoje" },
-            { key: "3semanas", label: "3 Semanas" },
-            { key: "mes", label: "Este Mês" },
-            { key: "mes_passado", label: "Mês Passado" },
-            { key: "ano", label: "Este Ano" },
-          ].map((p) => (
-            <button
-              key={p.key}
-              onClick={() => setPeriodFilter(p.key)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                periodFilter === p.key
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-          <Popover>
-            <PopoverTrigger asChild>
-              <button
-                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
-                  periodFilter === "custom"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Calendar className="h-3.5 w-3.5" /> Período
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-3 space-y-2 bg-card border-border" align="end">
-              <div className="flex items-center gap-2">
-                <div>
-                  <Label className="text-xs text-muted-foreground">De</Label>
-                  <Input type="date" value={customFrom} onChange={(e) => { setCustomFrom(e.target.value); setPeriodFilter("custom"); }} className="bg-secondary border-border text-xs h-8" />
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Até</Label>
-                  <Input type="date" value={customTo} onChange={(e) => { setCustomTo(e.target.value); setPeriodFilter("custom"); }} className="bg-secondary border-border text-xs h-8" />
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
-
-        {/* Search & Status Filters */}
-        <div className="flex gap-3 flex-wrap">
-          <div className="relative flex-1 min-w-[200px]">
+        <div className="flex gap-3 flex-wrap items-center">
+          <div className="relative flex-1 min-w-[250px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar leads..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 bg-card border-border" />
+            <Input
+              placeholder="Buscar por nome, nicho ou email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 bg-card border-border py-5"
+            />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40 bg-card border-border"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectTrigger className="w-44 bg-card border-border"><SelectValue placeholder="Todos Status" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="all">Filtro: Todos</SelectItem>
               {STATUSES.map((s) => (
                 <SelectItem key={s} value={s}>{statusConfig[s].label}</SelectItem>
               ))}
@@ -472,16 +576,19 @@ export default function Leads() {
         </div>
 
         {loading ? (
-          <div className="text-center py-12 text-muted-foreground">Carregando...</div>
+          <div className="flex justify-center items-center py-20">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
         ) : leads.length === 0 ? (
-          <div className="bg-card rounded-xl border border-border p-12 text-center">
-            <Users className="h-14 w-14 text-muted-foreground/30 mx-auto mb-3" />
-            <h3 className="font-semibold text-foreground mb-1">Nenhum lead salvo ainda</h3>
-            <p className="text-sm text-muted-foreground">Extraia empresas na página de Prospecção para popular o CRM.</p>
+          <div className="bg-card/50 rounded-2xl border border-dashed border-border p-20 text-center">
+            <Users className="h-16 w-16 text-muted-foreground/20 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-foreground">Sua base está vazia</h3>
+            <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-2">
+              Vá para a página de Prospecção para encontrar novas oportunidades.
+            </p>
           </div>
         ) : view === "kanban" ? (
-          /* Kanban view */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 overflow-x-auto">
+          <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-hide min-h-[600px] -mx-4 px-4 sm:mx-0 sm:px-0">
             {STATUSES.map((status) => {
               const statusLeads = filtered.filter((l) => l.status === status);
               return (
@@ -489,20 +596,33 @@ export default function Leads() {
                   key={status}
                   onDragOver={handleDragOver}
                   onDrop={() => handleDrop(status)}
-                  className="bg-secondary/50 rounded-xl p-3 min-h-[200px]"
+                  className={`bg-secondary/20 rounded-2xl p-4 flex-shrink-0 w-[300px] min-h-[500px] border border-transparent transition-all duration-300 ${draggedLead ? "border-primary/20 bg-primary/5 ring-4 ring-primary/5" : ""
+                    }`}
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <div className="flex items-center justify-between mb-4 px-1">
+                    <h3 className="text-[11px] font-black uppercase tracking-[0.1em] text-muted-foreground/60">
                       {statusConfig[status].label}
                     </h3>
-                    <Badge variant="outline" className="text-[10px] border-border">
+                    <Badge variant="secondary" className="text-[10px] bg-background/50 border-border px-1.5 h-5 min-w-[20px] justify-center">
                       {statusLeads.length}
                     </Badge>
                   </div>
-                  <div className="space-y-2">
-                    <AnimatePresence>
+                  <div className="space-y-3">
+                    <AnimatePresence mode="popLayout" initial={false}>
                       {statusLeads.map((lead) => (
-                        <LeadCard key={lead.id} lead={lead} compact />
+                        <LeadCard
+                          key={lead.id}
+                          lead={lead}
+                          compact
+                          onDragStart={handleDragStart}
+                          onClick={setSelectedLead}
+                          archiveLead={archiveLead}
+                          restoreLead={restoreLead}
+                          permanentDeleteLead={permanentDeleteLead}
+                          showArchived={showArchived}
+                          prospectorName={profiles.find(p => p.user_id === lead.user_id)?.display_name || profiles.find(p => p.user_id === lead.user_id)?.email}
+                          onClaim={claimLead}
+                        />
                       ))}
                     </AnimatePresence>
                   </div>
@@ -511,17 +631,37 @@ export default function Leads() {
             })}
           </div>
         ) : (
-          /* List view */
-          <div className="space-y-2">
-            <AnimatePresence>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <AnimatePresence mode="popLayout" initial={false}>
               {filtered.map((lead) => (
-                <LeadCard key={lead.id} lead={lead} />
+                <LeadCard
+                  key={lead.id}
+                  lead={lead}
+                  onDragStart={handleDragStart}
+                  onClick={setSelectedLead}
+                  archiveLead={archiveLead}
+                  restoreLead={restoreLead}
+                  permanentDeleteLead={permanentDeleteLead}
+                  showArchived={showArchived}
+                  prospectorName={profiles.find(p => p.user_id === lead.user_id)?.display_name || profiles.find(p => p.user_id === lead.user_id)?.email}
+                  onClaim={claimLead}
+                />
               ))}
             </AnimatePresence>
           </div>
         )}
       </div>
-      <LeadProfileDialog />
+
+      <LeadProfileDialog
+        selectedLead={selectedLead}
+        onClose={() => setSelectedLead(null)}
+        updateStatus={updateStatus}
+        archiveLead={archiveLead}
+        restoreLead={restoreLead}
+        permanentDeleteLead={permanentDeleteLead}
+        prospectorName={profiles.find(p => p.user_id === (selectedLead as any)?.user_id)?.display_name || profiles.find(p => p.user_id === (selectedLead as any)?.user_id)?.email}
+        onClaim={claimLead}
+      />
     </DashboardLayout>
   );
 }

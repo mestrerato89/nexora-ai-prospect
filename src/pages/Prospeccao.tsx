@@ -2,7 +2,7 @@ import { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Crosshair, Search, Loader2, Save, Wifi } from "lucide-react";
+import { Crosshair, Search, Loader2, Save, Wifi, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -63,7 +63,10 @@ export default function Prospeccao() {
       setProgress(100);
       setStatus("done");
 
-      const sourceLabel = response.source === "scraper" ? "Google Maps (scraper real)" : "IA (dados aproximados)";
+      const sourceLabel =
+        response.source === "google" ? "Google API Pro (Oficial)" :
+          response.source === "scraper" ? "Google Maps (Local)" :
+            "IA (Dados estimadas)";
       toast.success(`${response.results.length} empresas via ${sourceLabel}!`);
     } catch (err: any) {
       setStatus("error");
@@ -75,11 +78,13 @@ export default function Prospeccao() {
   const saveLead = async (result: ProspectResult) => {
 
     const { error } = await supabase.from("leads").insert({
-      user_id: user.id, name: result.name, address: result.address,
+      user_id: null, // Salva sem perfil para que qualquer um possa "pegar"
+      status: "novo",
+      name: result.name, address: result.address,
       phone: result.phone || null, website: result.website || null,
       rating: result.rating, niche, city: location,
       has_phone: !!result.phone, has_website: !!result.website, score: result.score,
-    });
+    } as any);
 
     if (error) {
       toast.error(error.message || "Erro ao salvar lead");
@@ -112,11 +117,13 @@ export default function Prospeccao() {
 
   const loading = status === "searching" || status === "enriching";
 
-  const sourceInfo = source === "scraper"
-    ? { icon: Wifi, label: "Google Maps (dados reais)", className: "text-primary" }
-    : source === "ai"
-    ? { icon: Search, label: "Resultados via IA — recomendamos verificar os dados", className: "text-muted-foreground" }
-    : null;
+  const sourceInfo = source === "google"
+    ? { icon: ShieldCheck, label: "Google Business API — Dados Oficiais", className: "text-primary font-bold" }
+    : source === "scraper"
+      ? { icon: Wifi, label: "Google Maps (Buscador Local)", className: "text-primary" }
+      : source === "ai"
+        ? { icon: Search, label: "Resultados via IA — Recomendamos verificar os dados", className: "text-muted-foreground italic" }
+        : null;
 
   return (
     <DashboardLayout>
@@ -172,11 +179,11 @@ export default function Prospeccao() {
             <AnimatePresence>
               {results.length === 0 && !loading && status !== "error" && (
                 <div className="bg-card rounded-xl border border-border p-12 text-center">
-                   <Search className="h-14 w-14 text-muted-foreground/30 mx-auto mb-4" />
-                   <h3 className="font-semibold text-foreground mb-1">Selecione nicho e cidade</h3>
-                   <p className="text-sm text-muted-foreground">
-                     Preencha os filtros e clique em buscar para encontrar empresas
-                   </p>
+                  <Search className="h-14 w-14 text-muted-foreground/30 mx-auto mb-4" />
+                  <h3 className="font-semibold text-foreground mb-1">Selecione nicho e cidade</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Preencha os filtros e clique em buscar para encontrar empresas
+                  </p>
                 </div>
               )}
 

@@ -3,7 +3,7 @@ import type { DashboardData } from "@/pages/Index";
 
 export function MetricsGrid({ data }: { data: DashboardData }) {
   const convRate = data.totalLeads > 0
-    ? Math.round((data.fechados / data.totalLeads) * 100)
+    ? Math.round((data.pagos / data.totalLeads) * 100)
     : 0;
 
   return (

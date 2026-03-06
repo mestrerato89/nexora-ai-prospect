@@ -159,7 +159,7 @@ function mapLocalResult(r: any, i: number): ProspectResult {
   };
 }
 
-async function searchAI(params: ProspectSearchParams): Promise<ProspectResult[]> {
+async function searchCloud(params: ProspectSearchParams): Promise<{ businesses: ProspectResult[]; source: SearchSource }> {
   const { data, error } = await supabase.functions.invoke("prospect-search", {
     body: params,
   });
@@ -180,12 +180,12 @@ async function searchAI(params: ProspectSearchParams): Promise<ProspectResult[]>
       if (context.status === 429) {
         throw new Error(
           backendMessage ||
-            "Busca temporariamente limitada. Aguarde cerca de 1 minuto e tente novamente."
+          "Busca temporariamente limitada. Aguarde cerca de 1 minuto e tente novamente."
         );
       }
 
       if (context.status === 402) {
-        throw new Error(backendMessage || "Créditos insuficientes para busca por IA.");
+        throw new Error(backendMessage || "Créditos insuficientes ou API Key inválida.");
       }
 
       if (backendMessage) {
@@ -193,43 +193,77 @@ async function searchAI(params: ProspectSearchParams): Promise<ProspectResult[]>
       }
     }
 
-    throw new Error(httpError?.message || "Erro na busca IA");
+    throw new Error(httpError?.message || "Erro na conexão com API Cloud");
   }
 
   if (data?.error) throw new Error(data.error);
-  return data?.businesses || [];
+
+  // Mapping cloud sources to frontend sources
+  let source: SearchSource = "ai";
+  if (data?.source === "google_places") source = "google";
+  if (data?.source === "google_search") source = "google";
+
+  return {
+    businesses: data?.businesses || [],
+    source
+  };
 }
 
-export type SearchSource = "scraper" | "ai";
+export type SearchSource = "scraper" | "ai" | "google";
 
 export async function searchProspects(
   params: ProspectSearchParams,
   onProgress?: (results: ProspectResult[], status: string) => void
 ): Promise<{ results: ProspectResult[]; source: SearchSource }> {
+  let cloudError: string | null = null;
+
+  onProgress?.([], "Conectando ao Google Cloud API...");
+
+  // 1. First Attempt: Cloud API (Official Google Pro)
+  try {
+    const cloudResponse = await searchCloud(params);
+    if (cloudResponse.businesses.length > 0) {
+      return {
+        results: prioritizeByLocation(cloudResponse.businesses, params.location),
+        source: cloudResponse.source
+      };
+    }
+    // If no results, we still consider this a "success" but empty
+    return { results: [], source: "google" };
+  } catch (err: any) {
+    cloudError = err.message || "Erro na conexão Cloud";
+    console.warn("[Prospect] Cloud API error:", cloudError);
+  }
+
+  // 2. Second Attempt: Local Scraper (as fallback)
   const scraperOnline = await isScraperOnline();
 
   if (scraperOnline) {
-    console.log("[Prospect] Usando scraper local");
-    onProgress?.([], "Conectado ao scraper local...");
+    onProgress?.([], "Cloud indisponível, tentando buscador local...");
+    try {
+      const { businesses, searchId } = await searchLocal(params);
 
-    const { businesses, searchId } = await searchLocal(params);
+      if (businesses.length > 0) {
+        return { results: prioritizeByLocation(businesses, params.location), source: "scraper" };
+      }
 
-    // Se veio do cache
-    if (businesses.length > 0) {
-      return { results: prioritizeByLocation(businesses, params.location), source: "scraper" };
+      const results = await pollSearchStatus(params.niche, params.location, (partial, status) => {
+        onProgress?.(prioritizeByLocation(partial, params.location), status);
+      });
+
+      return { results: prioritizeByLocation(results, params.location), source: "scraper" };
+    } catch (localErr: any) {
+      console.error("[Prospect] Local scraper failed:", localErr);
     }
-
-    // Polling
-    const results = await pollSearchStatus(params.niche, params.location, (partial, status) => {
-      onProgress?.(prioritizeByLocation(partial, params.location), status);
-    });
-
-    return { results: prioritizeByLocation(results, params.location), source: "scraper" };
   }
 
-  // Fallback: IA
-  console.log("[Prospect] Scraper offline, usando IA");
-  onProgress?.([], "Scraper offline — buscando com IA...");
-  const results = await searchAI(params);
-  return { results: prioritizeByLocation(results, params.location), source: "ai" };
+  // Final failure: Explain what went wrong
+  if (cloudError) {
+    if (cloudError.includes("API Key") || cloudError.includes("variable")) {
+      throw new Error("Erro de Configuraçâo:\nSua chave Google Maps API não foi encontrada no Supabase. Adicione 'GOOGLE_MAPS_API_KEY' aos Secrets do Supabase.");
+    }
+    throw new Error(`Erro na busca: ${cloudError}`);
+  }
+
+  throw new Error("Sem conexão:\nO Google Cloud falhou e o buscador local (porta 3099) nâo está rodando.");
 }

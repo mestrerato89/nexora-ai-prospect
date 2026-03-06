@@ -26,6 +26,7 @@ import Suporte from "./pages/Suporte";
 import Agenda from "./pages/Agenda";
 import Configuracoes from "./pages/Configuracoes";
 import Admin from "./pages/Admin";
+import Finance from "./pages/Finance";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,10 +44,10 @@ const App = () => (
         <BrowserRouter>
           <AuthProvider>
             <Routes>
-              <Route path="/login" element={<Index />} />
-              <Route path="/signup" element={<Index />} />
-              <Route path="/forgot-password" element={<Index />} />
-              <Route path="/reset-password" element={<Index />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/" element={<P><Index /></P>} />
               <Route path="/novo-app" element={<P><NovoApp /></P>} />
               <Route path="/novo-site" element={<P><NovoSite /></P>} />
@@ -63,6 +64,7 @@ const App = () => (
               <Route path="/agenda" element={<P><Agenda /></P>} />
               <Route path="/configuracoes" element={<P><Configuracoes /></P>} />
               <Route path="/admin" element={<P><Admin /></P>} />
+              <Route path="/financeiro" element={<P><Finance /></P>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>

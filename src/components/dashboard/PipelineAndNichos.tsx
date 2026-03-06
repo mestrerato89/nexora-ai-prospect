@@ -25,12 +25,12 @@ export function PipelineAndNichos({ data }: { data: DashboardData }) {
           </div>
         ) : (
           <div className="grid grid-cols-5 gap-2">
-            {(["novo", "contato", "proposta", "fechado", "perdido"] as const).map((status) => {
-              const count = status === "novo" ? data.totalLeads - data.contatados - data.fechados - data.perdidos
+            {(["novo", "contato", "proposta", "pago", "perdido"] as const).map((status) => {
+              const count = status === "novo" ? data.totalLeads - data.contatados - data.pagos - data.perdidos
                 : status === "contato" ? data.leadsQuentes
-                : status === "proposta" ? data.contatados - data.leadsQuentes
-                : status === "fechado" ? data.fechados
-                : data.perdidos;
+                  : status === "proposta" ? data.contatados - data.leadsQuentes
+                    : status === "pago" ? data.pagos
+                      : data.perdidos;
               return (
                 <div key={status} className="text-center">
                   <p className="text-2xl font-bold text-foreground">{Math.max(0, count)}</p>

@@ -5,12 +5,12 @@ const stages = [
   { key: "novos", label: "Novos", color: "bg-muted-foreground/20 text-muted-foreground" },
   { key: "leadsQuentes", label: "Contato", color: "bg-info/20 text-info" },
   { key: "proposta", label: "Proposta", color: "bg-warning/20 text-warning" },
-  { key: "fechados", label: "Fechados", color: "bg-primary/20 text-primary" },
+  { key: "pagos", label: "Pagos", color: "bg-primary/20 text-primary" },
 ] as const;
 
 export function PipelineFunnel({ data }: { data: DashboardData }) {
   const navigate = useNavigate();
-  const convRate = data.totalLeads > 0 ? Math.round((data.fechados / data.totalLeads) * 100) : 0;
+  const convRate = data.totalLeads > 0 ? Math.round((data.pagos / data.totalLeads) * 100) : 0;
 
   return (
     <div className="bg-card rounded-xl p-6 border border-border">

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Settings, User, Building, LogOut, Bell, Shield, CreditCard, Link as LinkIcon } from "lucide-react";
+import { Settings, User, Building, LogOut, Bell, Shield, CreditCard, Link as LinkIcon, Mail } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { motion } from "framer-motion";
 import type { Tables } from "@/integrations/supabase/types";
@@ -62,71 +62,179 @@ export default function Configuracoes() {
           </TabsList>
 
           <TabsContent value="perfil" className="mt-4">
-            <div className="bg-card rounded-xl border border-border p-6 space-y-5">
-              <div className="flex items-center gap-4">
-                <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center text-xl font-bold text-primary">
-                  {(profile.display_name || user?.email || "U").charAt(0).toUpperCase()}
+            <div className="bg-card rounded-xl border border-primary/10 p-6 space-y-6 shadow-xl shadow-primary/5">
+              <div className="flex items-center gap-6">
+                <div className="relative group">
+                  <div className="h-20 w-20 rounded-full bg-gradient-to-br from-primary to-primary/40 flex items-center justify-center text-2xl font-bold text-primary-foreground shadow-lg group-hover:scale-105 transition-transform">
+                    {(profile.display_name || user?.email || "U").charAt(0).toUpperCase()}
+                  </div>
+                  <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
+                    <User className="h-5 w-5 text-white" />
+                  </div>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground">{profile.display_name || "Seu nome"}</h3>
-                  <p className="text-sm text-muted-foreground">{profile.email || user?.email}</p>
+                  <h3 className="text-xl font-bold text-foreground">{profile.display_name || "Seu nome"}</h3>
+                  <p className="text-sm text-muted-foreground flex items-center gap-2">
+                    <Mail className="h-3 w-3" />
+                    {profile.email || user?.email}
+                  </p>
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div><Label>Nome completo</Label><Input value={profile.display_name || ""} onChange={(e) => setProfile({ ...profile, display_name: e.target.value })} className="bg-secondary border-border" /></div>
-                <div><Label>Email</Label><Input value={profile.email || ""} disabled className="bg-secondary border-border opacity-60" /></div>
-                <div><Label>Telefone</Label><Input value={profile.phone || ""} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} className="bg-secondary border-border" placeholder="(11) 99999-9999" /></div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Nome de Exibição / Apelido</Label>
+                  <Input
+                    value={profile.display_name || ""}
+                    placeholder="Ex: Victor Silva"
+                    onChange={(e) => setProfile({ ...profile, display_name: e.target.value })}
+                    className="bg-secondary/50 border-primary/10 focus:border-primary/30 h-11"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Telefone / WhatsApp</Label>
+                  <Input
+                    value={profile.phone || ""}
+                    placeholder="(11) 99999-9999"
+                    onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                    className="bg-secondary/50 border-primary/10 focus:border-primary/30 h-11"
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Email de Acesso</Label>
+                  <Input
+                    value={profile.email || user?.email || ""}
+                    disabled
+                    className="bg-secondary/30 border-primary/5 opacity-60 h-11"
+                  />
+                  <p className="text-[10px] text-muted-foreground italic">O email é gerenciado pela autenticação central e não pode ser alterado por aqui.</p>
+                </div>
               </div>
-              <div className="flex gap-3">
-                <Button onClick={save} disabled={loading} className="flex-1">{loading ? "Salvando..." : "Salvar Alterações"}</Button>
-                <Button variant="outline" className="border-border">Cancelar</Button>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  onClick={save}
+                  disabled={loading}
+                  className="flex-1 bg-primary hover:bg-primary/90 h-11 shadow-lg shadow-primary/20"
+                >
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Sincronizando...
+                    </span>
+                  ) : "Salvar Alterações"}
+                </Button>
+                <Button variant="ghost" onClick={() => window.location.reload()} className="h-11 border border-primary/5 hover:bg-primary/5">
+                  Descartar
+                </Button>
               </div>
             </div>
           </TabsContent>
 
           <TabsContent value="empresa" className="mt-4">
-            <div className="bg-card rounded-xl border border-border p-6 space-y-5">
-              <h3 className="font-semibold text-foreground">Dados da Empresa</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div><Label>Nome da empresa / Agência</Label><Input value={profile.company_name || ""} onChange={(e) => setProfile({ ...profile, company_name: e.target.value })} className="bg-secondary border-border" /></div>
-                <div><Label>CNPJ</Label><Input value={profile.company_cnpj || ""} onChange={(e) => setProfile({ ...profile, company_cnpj: e.target.value })} className="bg-secondary border-border" placeholder="00.000.000/0001-00" /></div>
+            <div className="bg-card rounded-xl border border-primary/10 p-6 space-y-6 shadow-xl shadow-primary/5">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="bg-primary/10 p-2 rounded-lg">
+                  <Building className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="text-lg font-bold text-foreground">Identidade Corporativa</h3>
               </div>
-              <Button onClick={save} disabled={loading}>{loading ? "Salvando..." : "Salvar"}</Button>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Nome da Empresa</Label>
+                  <Input
+                    value={profile.company_name || ""}
+                    placeholder="Ex: Nexora Solutions"
+                    onChange={(e) => setProfile({ ...profile, company_name: e.target.value })}
+                    className="bg-secondary/50 border-primary/10 focus:border-primary/30 h-11"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">CNPJ</Label>
+                  <Input
+                    value={profile.company_cnpj || ""}
+                    placeholder="00.000.000/0001-00"
+                    onChange={(e) => setProfile({ ...profile, company_cnpj: e.target.value })}
+                    className="bg-secondary/50 border-primary/10 focus:border-primary/30 h-11"
+                  />
+                </div>
+              </div>
+
+              <Button onClick={save} disabled={loading} className="w-full bg-primary hover:bg-primary/90 h-11">
+                {loading ? "Salvando..." : "Atualizar Cadastro Comercial"}
+              </Button>
             </div>
           </TabsContent>
 
           <TabsContent value="notificacoes" className="mt-4">
-            <div className="bg-card rounded-xl border border-border p-6 space-y-4">
-              <h3 className="font-semibold text-foreground">Preferências de Notificação</h3>
-              {[
-                { label: "Novos leads", desc: "Quando um novo lead é adicionado" },
-                { label: "Follow-ups", desc: "Lembretes de follow-ups agendados" },
-                { label: "Propostas aceitas", desc: "Quando uma proposta é aceita pelo cliente" },
-                { label: "Atualizações da plataforma", desc: "Novidades e melhorias do sistema" },
-              ].map((item) => (
-                <div key={item.label} className="flex items-center justify-between py-2">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{item.label}</p>
-                    <p className="text-xs text-muted-foreground">{item.desc}</p>
-                  </div>
-                  <Switch defaultChecked />
+            <div className="bg-card rounded-xl border border-primary/10 p-6 space-y-6 shadow-xl shadow-primary/5">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="bg-primary/10 p-2 rounded-lg">
+                  <Bell className="h-5 w-5 text-primary" />
                 </div>
-              ))}
+                <h3 className="text-lg font-bold text-foreground">Canais de Alerta</h3>
+              </div>
+
+              <div className="space-y-1">
+                {[
+                  { label: "Novos Leads Prospectados", desc: "Alertar quando uma nova empresa for adicionada ao CRM" },
+                  { label: "Follow-ups Pendentes", desc: "Lembretes diários de tarefas de acompanhamento" },
+                  { label: "Propostas Visualizadas", desc: "Saber quando o cliente abrir seu link de proposta" },
+                  { label: "Nexora AI: Resumo Diário", desc: "Resumo gerado por IA sobre sua performance e novas oportunidades" },
+                  { label: "WhatsApp: Alertas Diretos", desc: "Receber notificações de leads quentes direto no seu WhatsApp" },
+                  { label: "Temperatura de Leads", desc: "Avisar quando um lead frio começar a interagir novamente" },
+                  { label: "Relatórios Semanais", desc: "Estatísticas de conversão e sugestões de estratégia da Nexora" },
+                  { label: "Atualizações Críticas", desc: "Novas funcionalidades e avisos de sistema" },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center justify-between py-4 border-b border-border last:border-0 group">
+                    <div>
+                      <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{item.label}</p>
+                      <p className="text-xs text-muted-foreground">{item.desc}</p>
+                    </div>
+                    <Switch defaultChecked className="data-[state=checked]:bg-primary" />
+                  </div>
+                ))}
+              </div>
             </div>
           </TabsContent>
 
           <TabsContent value="seguranca" className="mt-4">
-            <div className="bg-card rounded-xl border border-border p-6 space-y-5">
-              <h3 className="font-semibold text-foreground">Segurança da Conta</h3>
-              <div className="space-y-3">
-                <div><Label>Senha atual</Label><Input type="password" className="bg-secondary border-border" placeholder="••••••••" /></div>
-                <div><Label>Nova senha</Label><Input type="password" className="bg-secondary border-border" placeholder="••••••••" /></div>
-                <div><Label>Confirmar nova senha</Label><Input type="password" className="bg-secondary border-border" placeholder="••••••••" /></div>
+            <div className="bg-card rounded-xl border border-primary/10 p-6 space-y-6 shadow-xl shadow-primary/5">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="bg-primary/10 p-2 rounded-lg">
+                  <Shield className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="text-lg font-bold text-foreground">Proteção da Conta</h3>
               </div>
-              <Button onClick={() => toast.info("Funcionalidade em desenvolvimento")}>Alterar Senha</Button>
-              <div className="border-t border-border pt-4 mt-4">
-                <Button variant="outline" className="border-destructive text-destructive hover:bg-destructive/10 gap-2" onClick={signOut}>
-                  <LogOut className="h-4 w-4" /> Sair da conta
+
+              <div className="space-y-4">
+                <div className="bg-muted/30 p-4 rounded-lg border border-primary/5">
+                  <p className="text-xs text-muted-foreground mb-4">Para sua segurança, a alteração de senha requer a verificação do email atual.</p>
+                  <Button
+                    variant="outline"
+                    className="w-full border-primary/10 hover:bg-primary/5 h-10"
+                    onClick={() => {
+                      supabase.auth.resetPasswordForEmail(user?.email || "", {
+                        redirectTo: `${window.location.origin}/reset-password`,
+                      });
+                      toast.success("Link enviado!", { description: "Verifique seu email para redefinir a senha." });
+                    }}
+                  >
+                    Solicitar Alteração por Email
+                  </Button>
+                </div>
+              </div>
+
+              <div className="border-t border-primary/5 pt-6 flex flex-col gap-4">
+                <div>
+                  <h4 className="text-sm font-bold text-destructive flex items-center gap-2">
+                    <LogOut className="h-4 w-4" /> Zona de Perigo
+                  </h4>
+                  <p className="text-xs text-muted-foreground mt-1">Encerrar a sessão ou desativar o acesso de todos os dispositivos.</p>
+                </div>
+                <Button variant="outline" className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:border-destructive/40 transition-all gap-2 h-11" onClick={signOut}>
+                  Sair do Nexora Intelligence
                 </Button>
               </div>
             </div>

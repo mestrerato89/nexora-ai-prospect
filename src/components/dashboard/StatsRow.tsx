@@ -26,7 +26,7 @@ export function StatsRow({ data }: { data: DashboardData }) {
     { icon: Users, iconColor: "bg-primary/20 text-primary", label: "Total de Leads", value: String(data.totalLeads) },
     { icon: Flame, iconColor: "bg-[hsl(var(--stat-icon-orange))]/20 text-[hsl(var(--stat-icon-orange))]", label: "Leads Quentes", value: String(data.leadsQuentes) },
     { icon: Clock, iconColor: "bg-info/20 text-info", label: "Contatados", value: String(data.contatados) },
-    { icon: UserCheck, iconColor: "bg-primary/20 text-primary", label: "Fechados", value: String(data.fechados) },
+    { icon: UserCheck, iconColor: "bg-primary/20 text-primary", label: "Pagos", value: String(data.pagos) },
     { icon: TrendingUp, iconColor: "bg-[hsl(var(--stat-icon-purple))]/20 text-[hsl(var(--stat-icon-purple))]", label: "Pipeline", value: `R$0k` },
     { icon: Star, iconColor: "bg-[hsl(var(--stat-icon-yellow))]/20 text-[hsl(var(--stat-icon-yellow))]", label: "Prev. Receita", value: `R$0k` },
   ];
