@@ -236,34 +236,38 @@ export async function searchProspects(
   }
 
   // 2. Second Attempt: Local Scraper (as fallback)
-  const scraperOnline = await isScraperOnline();
+  // Only try local scraper if it is truly online and we are likely in a local environment
+  const isLocalEnv = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
 
-  if (scraperOnline) {
-    onProgress?.([], "Cloud indisponível, tentando buscador local...");
-    try {
-      const { businesses, searchId } = await searchLocal(params);
+  if (isLocalEnv) {
+    const scraperOnline = await isScraperOnline();
+    if (scraperOnline) {
+      onProgress?.([], "Cloud indisponível, tentando buscador local...");
+      try {
+        const { businesses, searchId } = await searchLocal(params);
 
-      if (businesses.length > 0) {
-        return { results: prioritizeByLocation(businesses, params.location), source: "scraper" };
+        if (businesses.length > 0) {
+          return { results: prioritizeByLocation(businesses, params.location), source: "scraper" };
+        }
+
+        const results = await pollSearchStatus(params.niche, params.location, (partial, status) => {
+          onProgress?.(prioritizeByLocation(partial, params.location), status);
+        });
+
+        return { results: prioritizeByLocation(results, params.location), source: "scraper" };
+      } catch (localErr: any) {
+        console.error("[Prospect] Local scraper failed:", localErr);
       }
-
-      const results = await pollSearchStatus(params.niche, params.location, (partial, status) => {
-        onProgress?.(prioritizeByLocation(partial, params.location), status);
-      });
-
-      return { results: prioritizeByLocation(results, params.location), source: "scraper" };
-    } catch (localErr: any) {
-      console.error("[Prospect] Local scraper failed:", localErr);
     }
   }
 
   // Final failure: Explain what went wrong
   if (cloudError) {
-    if (cloudError.includes("API Key") || cloudError.includes("variable")) {
-      throw new Error("Erro de Configuraçâo:\nSua chave Google Maps API não foi encontrada no Supabase. Adicione 'GOOGLE_MAPS_API_KEY' aos Secrets do Supabase.");
+    if (cloudError.includes("API Key") || cloudError.includes("variable") || cloudError.includes("prospect-search")) {
+      throw new Error("Erro de Configuração:\nSua chave Google Maps API não foi encontrada ou o serviço no Supabase falhou. Verifique as 'Secrets' do projeto.");
     }
-    throw new Error(`Erro na busca: ${cloudError}`);
+    throw new Error(`Erro na busca Google Cloud: ${cloudError}`);
   }
 
-  throw new Error("Sem conexão:\nO Google Cloud falhou e o buscador local (porta 3099) nâo está rodando.");
+  throw new Error("Sem conexão:\nO Google Cloud falhou e o buscador local nâo está disponível ou você está acessando remotamente.");
 }
