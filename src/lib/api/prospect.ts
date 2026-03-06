@@ -217,9 +217,35 @@ export async function searchProspects(
 ): Promise<{ results: ProspectResult[]; source: SearchSource }> {
   let cloudError: string | null = null;
 
-  onProgress?.([], "Conectando ao Google Cloud API...");
+  // --- TIERED SEARCH STRATEGY ---
+  onProgress?.([], "Iniciando busca inteligente...");
 
-  // 1. First Attempt: Cloud API (Official Google Pro)
+  // 1. FIRST TIER: Local Scraper (Free / Unlimited)
+  // We always check if the local scraper is online first to save API costs.
+  const scraperOnline = await isScraperOnline();
+  if (scraperOnline) {
+    onProgress?.([], "Buscador local detectado! Consultando sem custos...");
+    try {
+      const { businesses, searchId } = await searchLocal(params);
+      if (businesses.length > 0) {
+        return { results: prioritizeByLocation(businesses, params.location), source: "scraper" };
+      }
+
+      const results = await pollSearchStatus(params.niche, params.location, (partial, status) => {
+        onProgress?.(prioritizeByLocation(partial, params.location), status);
+      });
+
+      if (results.length > 0) {
+        return { results: prioritizeByLocation(results, params.location), source: "scraper" };
+      }
+    } catch (localErr) {
+      console.warn("[Prospect] Local scraper attempt failed, falling back to Cloud:", localErr);
+    }
+  }
+
+  // 2. SECOND TIER: Google Cloud API (Paid / High Quality)
+  // If local is offline or failed, use the official API (which uses the $200 free credit).
+  onProgress?.([], "Buscador local offline. Conectando ao Google Cloud...");
   try {
     const cloudResponse = await searchCloud(params);
     if (cloudResponse.businesses.length > 0) {
@@ -228,46 +254,21 @@ export async function searchProspects(
         source: cloudResponse.source
       };
     }
-    // If no results, we still consider this a "success" but empty
-    return { results: [], source: "google" };
   } catch (err: any) {
     cloudError = err.message || "Erro na conexão Cloud";
     console.warn("[Prospect] Cloud API error:", cloudError);
   }
 
-  // 2. Second Attempt: Local Scraper (as fallback)
-  // Only try local scraper if it is truly online and we are likely in a local environment
-  const isLocalEnv = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+  // 3. THIRD TIER: Gemini Fallback (AI-powered search)
+  // This is already integrated within the searchCloud function on the backend as a fallback.
+  // We explain the final status to the user if everything fails.
 
-  if (isLocalEnv) {
-    const scraperOnline = await isScraperOnline();
-    if (scraperOnline) {
-      onProgress?.([], "Cloud indisponível, tentando buscador local...");
-      try {
-        const { businesses, searchId } = await searchLocal(params);
-
-        if (businesses.length > 0) {
-          return { results: prioritizeByLocation(businesses, params.location), source: "scraper" };
-        }
-
-        const results = await pollSearchStatus(params.niche, params.location, (partial, status) => {
-          onProgress?.(prioritizeByLocation(partial, params.location), status);
-        });
-
-        return { results: prioritizeByLocation(results, params.location), source: "scraper" };
-      } catch (localErr: any) {
-        console.error("[Prospect] Local scraper failed:", localErr);
-      }
-    }
-  }
-
-  // Final failure: Explain what went wrong
   if (cloudError) {
     if (cloudError.includes("API Key") || cloudError.includes("variable") || cloudError.includes("prospect-search")) {
-      throw new Error("Erro de Configuração:\nSua chave Google Maps API não foi encontrada ou o serviço no Supabase falhou. Verifique as 'Secrets' do projeto.");
+      throw new Error("Erro de Configuração:\nSua chave Google Maps API não foi configurada no Supabase ou o limite de busca foi excedido.");
     }
-    throw new Error(`Erro na busca Google Cloud: ${cloudError}`);
+    throw new Error(`Erro na busca: ${cloudError}`);
   }
 
-  throw new Error("Sem conexão:\nO Google Cloud falhou e o buscador local nâo está disponível ou você está acessando remotamente.");
+  throw new Error("Nenhum resultado encontrado:\nO buscador local está offline e o Google Cloud não retornou dados para este nicho/localização.");
 }
