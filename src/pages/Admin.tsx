@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { motion } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
 import {
     Users,
     UserPlus,
@@ -106,16 +107,45 @@ const Admin = () => {
         },
     ];
 
-    const handleCreateEmployee = (e: React.FormEvent) => {
+    const handleCreateEmployee = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Simulating API call
-        toast.success(`Convite enviado para ${newEmployee.email}!`, {
-            description: "O funcionário receberá um link para definir a senha.",
-        });
+        try {
+            // 1. Enviar o convite oficial do Supabase
+            // Nota: No Supabase, o convite cria o usuário e envia o e-mail de confirmação.
+            // O usuário ficará com status 'pending' até confirmar o e-mail.
+            const { data, error } = await supabase.auth.admin.inviteUserByEmail(newEmployee.email, {
+                data: {
+                    display_name: newEmployee.name,
+                    role: newEmployee.role
+                },
+                redirectTo: `${window.location.origin}/reset-password`
+            });
 
-        setIsDialogOpen(false);
-        setNewEmployee({ name: "", email: "", role: "employee" });
+            if (error) {
+                // Se o erro for de 'admin privileges', explicamos que precisa de configuração no dashboard
+                if (error.status === 403) {
+                    toast.error("Erro de Permissão", {
+                        description: "Para enviar convites, você precisa da 'Service Role Key' configurada ou usar o dashboard do Supabase.",
+                    });
+                } else {
+                    throw error;
+                }
+                return;
+            }
+
+            toast.success(`Convite enviado para ${newEmployee.email}!`, {
+                description: "O funcionário receberá um e-mail para ativar a conta.",
+            });
+
+            setIsDialogOpen(false);
+            setNewEmployee({ name: "", email: "", role: "employee" });
+        } catch (error: any) {
+            console.error("Erro ao convidar:", error);
+            toast.error("Falha ao enviar convite", {
+                description: error.message || "Ocorreu um erro inesperado."
+            });
+        }
     };
 
     const containerVariants = {
