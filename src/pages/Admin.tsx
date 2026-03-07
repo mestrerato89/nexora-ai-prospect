@@ -102,7 +102,11 @@ const Admin = () => {
                 description: `Um link de redefinição foi enviado para ${email}.`
             });
         } catch (error: any) {
-            toast.error("Erro ao solicitar redefinição", { description: error.message });
+            let msg = error.message;
+            if (msg.includes("For security purposes")) {
+                msg = "Por motivos de segurança, aguarde alguns segundos antes de solicitar novamente.";
+            }
+            toast.error("Erro ao solicitar redefinição", { description: msg });
         }
     };
 
