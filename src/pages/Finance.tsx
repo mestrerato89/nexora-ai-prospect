@@ -1315,7 +1315,7 @@ const Finance = () => {
                                         <div className="flex justify-between items-start mb-3">
                                             <div className="p-2 bg-primary/10 rounded-xl"><Shield className="h-5 w-5 text-primary" /></div>
                                         </div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Head Operacional</p>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Head Comercial</p>
                                         <h3 className="text-2xl font-black mt-1">R$ {headPayout.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
                                         <p className="text-[10px] text-muted-foreground mt-1">25% do Lucro Líquido</p>
                                     </CardContent>
@@ -1408,7 +1408,7 @@ const Finance = () => {
                                     <div className="flex items-center gap-4">
                                         <div className="p-3 bg-primary/10 rounded-2xl"><Shield className="h-6 w-6 text-primary" /></div>
                                         <div>
-                                            <h4 className="text-sm font-black uppercase tracking-widest">Head Operacional</h4>
+                                            <h4 className="text-sm font-black uppercase tracking-widest">Head Comercial</h4>
                                             <p className="text-[10px] text-muted-foreground mt-0.5">25% do lucro líquido de R$ {netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                                         </div>
                                     </div>

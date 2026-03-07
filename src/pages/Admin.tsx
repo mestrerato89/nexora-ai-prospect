@@ -81,7 +81,7 @@ const Admin = () => {
 
             if (error) throw error;
 
-            const roleLabel = newRole === 'admin' ? 'Admin' : newRole === 'head_operacional' ? 'Head Operacional' : 'BDR';
+            const roleLabel = newRole === 'admin' ? 'Admin' : newRole === 'head_operacional' ? 'Head Comercial' : 'BDR';
             toast.success(`Cargo atualizado!`, {
                 description: `O usuário agora é um ${roleLabel}.`
             });
@@ -218,7 +218,7 @@ const Admin = () => {
                                         </TableCell>
                                         <TableCell>
                                             <Badge variant={employee.role === 'admin' ? "default" : employee.role === 'head_operacional' ? "outline" : "secondary"} className={employee.role === 'head_operacional' ? "border-primary text-primary" : ""}>
-                                                {employee.role === 'admin' ? 'Admin' : employee.role === 'head_operacional' ? 'Head Operacional' : 'BDR'}
+                                                {employee.role === 'admin' ? 'Admin' : employee.role === 'head_operacional' ? 'Head Comercial' : 'BDR'}
                                             </Badge>
                                         </TableCell>
                                         <TableCell>
@@ -240,7 +240,7 @@ const Admin = () => {
                                                         Admin (Total)
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem onClick={() => handleUpdateRole(employee.user_id, 'head_operacional')}>
-                                                        Head Operacional
+                                                        Head Comercial
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem onClick={() => handleUpdateRole(employee.user_id, 'bdr')}>
                                                         BDR (Prospector)
