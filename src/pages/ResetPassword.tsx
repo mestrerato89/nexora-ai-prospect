@@ -13,23 +13,53 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // Handle the recovery token from the URL hash
     const hash = window.location.hash;
-    if (!hash.includes("type=recovery")) {
+    const params = new URLSearchParams(hash.replace("#", "?"));
+    const type = params.get("type");
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+
+    if (type === "recovery" && accessToken) {
+      // Set the session from the recovery tokens
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken || "",
+      });
+    } else if (!hash.includes("type=recovery")) {
+      // If no recovery token, redirect to login
       navigate("/login");
     }
   }, [navigate]);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    const { error } = await supabase.auth.updateUser({ password });
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Senha atualizada com sucesso!");
-      navigate("/");
+    if (password.length < 6) {
+      toast.error("A senha deve ter pelo menos 6 caracteres");
+      return;
     }
-    setLoading(false);
+
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+
+      if (error) {
+        toast.error(error.message);
+        setLoading(false);
+        return;
+      }
+
+      toast.success("Senha atualizada com sucesso! Redirecionando...");
+
+      // Wait briefly for auth state to stabilize, then redirect
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 1500);
+    } catch (err: any) {
+      toast.error("Erro ao atualizar senha: " + (err.message || "Tente novamente"));
+      setLoading(false);
+    }
   };
 
   return (
@@ -57,3 +87,4 @@ export default function ResetPassword() {
     </div>
   );
 }
+
