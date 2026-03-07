@@ -11,6 +11,10 @@ import { RecentProjects } from "@/components/dashboard/RecentProjects";
 import { NewsSection } from "@/components/dashboard/NewsSection";
 import { StatsRow } from "@/components/dashboard/StatsRow";
 import { BdrRanking } from "@/components/dashboard/BdrRanking";
+import { PeriodSelector } from "@/components/dashboard/PeriodSelector";
+import { LayoutDashboard, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { startOfMonth, endOfMonth, eachDayOfInterval, format as formatDate, startOfYear, endOfYear, eachMonthOfInterval } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -45,14 +49,46 @@ const Index = () => {
     withPhone: 0, withWebsite: 0, avgRating: "—", pendingFollowUps: 0,
     overdueFollowUps: 0, topNiches: [], followUpsList: [], leadsByDay: [],
   });
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().substring(0, 7));
+  const [viewMode, setViewMode] = useState<'month' | 'year' | 'range'>('month');
+  const [customRange, setCustomRange] = useState({
+    from: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
+    to: new Date().toISOString().split('T')[0]
+  });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
 
     const fetchData = async () => {
+      setLoading(true);
+      let start = new Date(selectedMonth + "-01");
+      let end = new Date(selectedMonth + "-01");
+
+      if (viewMode === 'month') {
+        end.setMonth(end.getMonth() + 1);
+      } else if (viewMode === 'year') {
+        start.setMonth(0);
+        end.setFullYear(end.getFullYear() + 1);
+        end.setMonth(0);
+      } else {
+        start = new Date(customRange.from);
+        end = new Date(customRange.to);
+        end.setHours(23, 59, 59, 999);
+      }
+
       const [leadsRes, followUpsRes] = await Promise.all([
-        supabase.from("leads").select("*").eq("user_id", user.id),
-        supabase.from("follow_ups").select("*").eq("user_id", user.id).eq("completed", false).order("due_date", { ascending: true }).limit(10),
+        supabase.from("leads")
+          .select("*")
+          .eq("user_id", user.id)
+          .gte("created_at", start.toISOString())
+          .lt("created_at", end.toISOString()),
+        supabase.from("follow_ups")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("completed", false)
+          .order("due_date", { ascending: true })
+          .limit(10),
       ]);
 
       const leads = leadsRes.data || [];
@@ -71,29 +107,61 @@ const Index = () => {
         ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)
         : "—";
 
-      // Leads by day (last 30 days)
+      // Leads chart data based on period
       const dayMap: Record<string, number> = {};
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      for (let d = new Date(thirtyDaysAgo); d <= now; d.setDate(d.getDate() + 1)) {
-        dayMap[d.toISOString().slice(0, 10)] = 0;
+
+      if (viewMode === 'month') {
+        const days = eachDayOfInterval({
+          start: startOfMonth(start),
+          end: endOfMonth(start)
+        });
+        days.forEach(d => {
+          dayMap[formatDate(d, 'yyyy-MM-dd')] = 0;
+        });
+        leads.forEach((l) => {
+          const day = l.created_at.slice(0, 10);
+          if (dayMap[day] !== undefined) dayMap[day]++;
+        });
+      } else if (viewMode === 'year') {
+        const months = eachMonthOfInterval({
+          start: startOfYear(start),
+          end: endOfYear(start)
+        });
+        months.forEach(m => {
+          dayMap[formatDate(m, 'yyyy-MM')] = 0;
+        });
+        leads.forEach((l) => {
+          const month = l.created_at.slice(0, 7);
+          if (dayMap[month] !== undefined) dayMap[month]++;
+        });
+      } else {
+        // Range mode: show daily
+        const days = eachDayOfInterval({
+          start: start,
+          end: end
+        });
+        // Limit to reasonable number of ticks if range is huge
+        days.forEach(d => {
+          dayMap[formatDate(d, 'yyyy-MM-dd')] = 0;
+        });
+        leads.forEach((l) => {
+          const day = l.created_at.slice(0, 10);
+          if (dayMap[day] !== undefined) dayMap[day]++;
+        });
       }
-      leads.forEach((l) => {
-        const day = l.created_at.slice(0, 10);
-        if (dayMap[day] !== undefined) dayMap[day]++;
-      });
+
       const leadsByDay = Object.entries(dayMap).map(([date, count]) => ({ date, count }));
 
       const novos = leads.filter((l) => l.status === "novo").length;
-      const proposta = leads.filter((l) => l.status === "proposta").length;
+      const negociando = leads.filter((l) => l.status === "negociando").length;
 
       setData({
         totalLeads: leads.length,
-        leadsQuentes: leads.filter((l) => l.status === "contato").length,
-        contatados: leads.filter((l) => l.status === "contato" || l.status === "proposta").length,
+        leadsQuentes: leads.filter((l) => l.status === "contatado").length,
+        contatados: leads.filter((l) => l.status === "contatado" || l.status === "negociando").length,
         pagos: leads.filter((l) => l.status === "pago").length,
         perdidos: leads.filter((l) => l.status === "perdido").length,
-        novos, proposta,
+        novos, proposta: negociando,
         withPhone: leads.filter((l) => l.has_phone).length,
         withWebsite: leads.filter((l) => l.has_website).length,
         avgRating,
@@ -103,10 +171,11 @@ const Index = () => {
         followUpsList: followUps.map((f) => ({ id: f.id, title: f.title, due_date: f.due_date, lead_id: f.lead_id, completed: f.completed })),
         leadsByDay,
       });
+      setLoading(false);
     };
 
     fetchData();
-  }, [user]);
+  }, [user, selectedMonth, viewMode, customRange]);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -127,10 +196,17 @@ const Index = () => {
         animate="visible"
       >
         <motion.div variants={itemVariants}>
-          <h1 className="text-xl font-mono font-bold text-foreground">{getGreeting()}</h1>
-          <p className="text-muted-foreground text-[11px] font-mono uppercase tracking-[0.15em] mt-1">
-            Painel de operações ativo — Rataria Intelligence
-          </p>
+          <PeriodSelector
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+            selectedMonth={selectedMonth}
+            setSelectedMonth={setSelectedMonth}
+            customRange={customRange}
+            setCustomRange={setCustomRange}
+            title={getGreeting()}
+            subtitle="Painel de operações ativo — Rataria Intelligence"
+            icon={<LayoutDashboard className="h-6 w-6 text-primary" />}
+          />
         </motion.div>
 
         <motion.div variants={itemVariants}>

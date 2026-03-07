@@ -36,6 +36,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LeadSelector } from "@/components/LeadSelector";
+import { PeriodSelector } from "@/components/dashboard/PeriodSelector";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -100,7 +101,11 @@ const Finance = () => {
     const [expenses, setExpenses] = useState<Expense[]>([]);
     const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
     const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().substring(0, 7)); // YYYY-MM format
-    const [viewMode, setViewMode] = useState<'month' | 'year'>('month');
+    const [viewMode, setViewMode] = useState<'month' | 'year' | 'range'>('month');
+    const [customRange, setCustomRange] = useState({
+        from: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
+        to: new Date().toISOString().split('T')[0]
+    });
 
     // Form States
     const [newPayment, setNewPayment] = useState({ leadId: "", amount: 0 });
@@ -168,18 +173,30 @@ const Finance = () => {
         const pDate = new Date(p.created_at);
         if (viewMode === 'year') {
             return pDate.getFullYear().toString() === selectedMonth.split('-')[0];
+        } else if (viewMode === 'month') {
+            const pMonth = `${pDate.getFullYear()}-${String(pDate.getMonth() + 1).padStart(2, '0')}`;
+            return pMonth === selectedMonth;
+        } else {
+            const start = new Date(customRange.from);
+            const end = new Date(customRange.to);
+            end.setHours(23, 59, 59, 999);
+            return pDate >= start && pDate <= end;
         }
-        const pMonth = `${pDate.getFullYear()}-${String(pDate.getMonth() + 1).padStart(2, '0')}`;
-        return pMonth === selectedMonth;
     });
 
     const filteredExpenses = expenses.filter(e => {
         const eDate = new Date(e.date);
         if (viewMode === 'year') {
             return eDate.getFullYear().toString() === selectedMonth.split('-')[0];
+        } else if (viewMode === 'month') {
+            const eMonth = `${eDate.getFullYear()}-${String(eDate.getMonth() + 1).padStart(2, '0')}`;
+            return eMonth === selectedMonth;
+        } else {
+            const start = new Date(customRange.from);
+            const end = new Date(customRange.to);
+            end.setHours(23, 59, 59, 999);
+            return eDate >= start && eDate <= end;
         }
-        const eMonth = `${eDate.getFullYear()}-${String(eDate.getMonth() + 1).padStart(2, '0')}`;
-        return eMonth === selectedMonth;
     });
 
     const approvedPayments = filteredPayments.filter(p => p.status === 'aprovado');
@@ -446,113 +463,22 @@ const Finance = () => {
         visible: { opacity: 1, y: 0 },
     };
 
-    const changeMonth = (offset: number) => {
-        const date = new Date(selectedMonth + "-01");
-        if (viewMode === 'month') {
-            date.setMonth(date.getMonth() + offset);
-        } else {
-            date.setFullYear(date.getFullYear() + offset);
-        }
-        setSelectedMonth(date.toISOString().substring(0, 7));
-    };
-
-    const formatSelectedDate = () => {
-        const date = new Date(selectedMonth + "-15");
-        if (viewMode === 'year') {
-            return `Ano de ${date.getFullYear()}`;
-        }
-        return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-    };
 
     return (
         <DashboardLayout>
             <div className="space-y-6 max-w-7xl mx-auto">
-                <motion.div initial="hidden" animate="visible" variants={itemVariants} className="relative mb-6">
-                    {/* Compact Glassmorphism Header */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 rounded-[2rem] blur-2xl -z-10" />
-                    <div className="bg-card/40 backdrop-blur-xl border border-primary/10 rounded-[2rem] p-4 lg:p-6 flex flex-col lg:flex-row items-center justify-between gap-6 shadow-xl shadow-primary/5">
-
-                        <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20 shadow-inner shrink-0">
-                                <DollarSign className="h-6 w-6 text-primary" />
-                            </div>
-                            <div>
-                                <h2 className="text-xl font-black tracking-tight text-foreground flex items-center gap-2">
-                                    Gestão Financeira
-                                    <Badge className="bg-primary/20 text-primary border-0 text-[8px] font-black uppercase px-2 py-0 h-4">PRO</Badge>
-                                </h2>
-                                <p className="text-muted-foreground text-[9px] font-bold uppercase tracking-widest opacity-60 line-clamp-1">Faturamento & Governança de Lucro</p>
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col md:flex-row items-center gap-3 bg-muted/30 p-1.5 rounded-3xl border border-primary/5">
-                            <div className="flex p-1 bg-background/40 rounded-2xl border border-primary/5 shadow-inner">
-                                <button
-                                    onClick={() => setViewMode('month')}
-                                    className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${viewMode === 'month' ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20' : 'text-muted-foreground hover:text-foreground'}`}
-                                >
-                                    Mês
-                                </button>
-                                <button
-                                    onClick={() => setViewMode('year')}
-                                    className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${viewMode === 'year' ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20' : 'text-muted-foreground hover:text-foreground'}`}
-                                >
-                                    Ano
-                                </button>
-                            </div>
-
-                            <div className="h-6 w-[1px] bg-primary/10 hidden md:block mx-1" />
-
-                            <div className="flex items-center gap-3 px-2">
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => changeMonth(-1)}
-                                    className="h-8 w-8 rounded-full hover:bg-primary/10 text-primary transition-all active:scale-90"
-                                >
-                                    <ChevronLeft className="h-5 w-5" />
-                                </Button>
-
-                                <div className="relative group text-center min-w-[140px]">
-                                    <span className="block text-sm font-black uppercase tracking-tight text-foreground transition-all group-hover:text-primary cursor-default whitespace-nowrap">
-                                        {formatSelectedDate()}
-                                    </span>
-                                    <input
-                                        type={viewMode === 'month' ? "month" : "number"}
-                                        value={viewMode === 'month' ? selectedMonth : selectedMonth.split('-')[0]}
-                                        onChange={(e) => {
-                                            if (viewMode === 'year') {
-                                                setSelectedMonth(`${e.target.value}-01`);
-                                            } else {
-                                                setSelectedMonth(e.target.value);
-                                            }
-                                        }}
-                                        className="absolute inset-0 opacity-0 cursor-pointer"
-                                    />
-                                    <p className="text-[8px] font-mono font-black uppercase text-primary/60 tracking-tighter flex items-center justify-center gap-1 opacity-60">
-                                        Alterar Período <Calendar className="h-2 w-2" />
-                                    </p>
-                                </div>
-
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => changeMonth(1)}
-                                    className="h-8 w-8 rounded-full hover:bg-primary/10 text-primary transition-all active:scale-90"
-                                >
-                                    <ChevronRight className="h-5 w-5" />
-                                </Button>
-                            </div>
-
-                            <div className="px-5 py-2.5 bg-primary/10 rounded-2xl hidden lg:flex flex-col justify-center items-center text-center min-w-[130px] border border-primary/10 shadow-inner">
-                                <p className="text-[8px] font-black text-primary/60 uppercase tracking-widest mb-0.5">Saldo Líquido</p>
-                                <p className="text-sm font-black text-primary">R$ {netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</p>
-                                <div className="w-full max-w-[80px] h-1 bg-primary/20 rounded-full mt-1.5 overflow-hidden">
-                                    <div className="h-full bg-primary" style={{ width: '85%' }} />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <motion.div initial="hidden" animate="visible" variants={itemVariants}>
+                    <PeriodSelector
+                        viewMode={viewMode}
+                        setViewMode={setViewMode}
+                        selectedMonth={selectedMonth}
+                        setSelectedMonth={setSelectedMonth}
+                        customRange={customRange}
+                        setCustomRange={setCustomRange}
+                        title="Gestão Financeira"
+                        subtitle="Faturamento & Governança de Lucro"
+                        icon={<DollarSign className="h-6 w-6 text-primary" />}
+                    />
                 </motion.div>
 
                 <Tabs defaultValue="overview" className="space-y-8">
@@ -1376,8 +1302,8 @@ const Finance = () => {
                         <p className="text-[11px] text-muted-foreground font-medium">As informações financeiras, recebimentos de leads e lançamentos de custos são protegidos por criptografia e visíveis apenas para Administradores Master da Rataria Intelligence.</p>
                     </div>
                 </motion.div>
-            </div>
-        </DashboardLayout>
+            </div >
+        </DashboardLayout >
     );
 };
 
