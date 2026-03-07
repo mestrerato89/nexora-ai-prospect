@@ -218,7 +218,7 @@ const Index = () => {
             customRange={customRange}
             setCustomRange={setCustomRange}
             title={getGreeting()}
-            subtitle="Painel de operações ativo — Nexora AI"
+            subtitle="Painel de operações ativo — Rataria AI"
             icon={<LayoutDashboard className="h-6 w-6 text-primary" />}
           />
         </motion.div>

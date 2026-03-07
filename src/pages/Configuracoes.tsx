@@ -182,10 +182,10 @@ export default function Configuracoes() {
                   { key: "new_leads", label: "Novos Leads Prospectados", desc: "Alertar quando uma nova empresa for adicionada ao CRM" },
                   { key: "follow_ups", label: "Follow-ups Pendentes", desc: "Lembretes diários de tarefas de acompanhamento" },
                   { key: "proposals", label: "Propostas Visualizadas", desc: "Saber quando o cliente abrir seu link de proposta" },
-                  { key: "ai_summary", label: "Nexora AI: Resumo Diário", desc: "Resumo gerado por IA sobre sua performance e novas oportunidades" },
+                  { key: "ai_summary", label: "Rataria AI: Resumo Diário", desc: "Resumo gerado por IA sobre sua performance e novas oportunidades" },
                   { key: "whatsapp_alerts", label: "WhatsApp: Alertas Diretos", desc: "Receber notificações de leads quentes direto no seu WhatsApp" },
                   { key: "lead_temperature", label: "Temperatura de Leads", desc: "Avisar quando um lead frio começar a interagir novamente" },
-                  { key: "weekly_reports", label: "Relatórios Semanais", desc: "Estatísticas de conversão e sugestões de estratégia da Nexora" },
+                  { key: "weekly_reports", label: "Relatórios Semanais", desc: "Estatísticas de conversão e sugestões de estratégia da Rataria" },
                   { key: "critical_updates", label: "Atualizações Críticas", desc: "Novas funcionalidades e avisos de sistema" },
                 ].map((item) => (
                   <div key={item.key} className="flex items-center justify-between py-4 border-b border-border last:border-0 group">
@@ -246,7 +246,7 @@ export default function Configuracoes() {
                   <p className="text-xs text-muted-foreground mt-1">Encerrar a sessão ou desativar o acesso de todos os dispositivos.</p>
                 </div>
                 <Button variant="outline" className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:border-destructive/40 transition-all gap-2 h-11" onClick={signOut}>
-                  Sair do Nexora AI
+                  Sair do Rataria AI
                 </Button>
               </div>
             </div>

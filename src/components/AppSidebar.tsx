@@ -139,7 +139,7 @@ export function AppSidebar() {
           </div>
           {!collapsed && (
             <div>
-              <span className="text-base font-mono font-bold tracking-tight text-foreground">Nexora</span>
+              <span className="text-base font-mono font-bold tracking-tight text-foreground">Rataria</span>
               <p className="text-[9px] font-mono tracking-[0.35em] text-muted-foreground uppercase">AI</p>
             </div>
           )}

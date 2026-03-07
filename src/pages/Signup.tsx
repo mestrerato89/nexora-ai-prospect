@@ -46,7 +46,7 @@ export default function Signup() {
               <circle cx="7" cy="21" r="2" fill="currentColor" />
               <circle cx="21" cy="21" r="2" fill="currentColor" />
             </svg>
-            <span className="text-2xl font-mono font-bold text-foreground">Nexora</span>
+            <span className="text-2xl font-mono font-bold text-foreground">Rataria</span>
           </div>
           <p className="text-sm text-muted-foreground">Crie sua conta gratuitamente</p>
         </div>
