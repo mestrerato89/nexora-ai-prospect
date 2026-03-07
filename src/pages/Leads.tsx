@@ -70,59 +70,58 @@ const LeadCard = ({
       className={`bg-card rounded-2xl border border-border/60 overflow-hidden card-hover group/card ${compact ? `border-l-4 ${sc?.kanbanColor || ""}` : ""
         }`}
     >
-      {/* Header row: drag handle + name + badges + archive/delete */}
-      <div className="flex items-start gap-2 p-3 pb-0">
-        <div className="pt-1 cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors">
+      {/* Header: drag + name (full width) */}
+      <div className="flex items-start gap-2 px-3 pt-3 pb-0">
+        <div className="pt-0.5 cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors">
           <GripVertical className="h-4 w-4" />
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2">
-            <h4
-              className="font-black text-sm text-foreground leading-tight line-clamp-2 uppercase tracking-wide cursor-pointer hover:text-primary transition-colors"
-              onClick={() => onClick(lead)}
-            >
-              {lead.name}
-            </h4>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <span className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono bg-secondary/60 px-1.5 py-0.5 rounded">
-                <Clock className="h-3 w-3" />{daysAgo}d
-              </span>
-              {lead.score != null && (
-                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${(lead.score || 0) >= 80 ? "bg-emerald-500/20 text-emerald-500" :
-                  (lead.score || 0) >= 50 ? "bg-amber-500/20 text-amber-500" :
-                    "bg-destructive/20 text-destructive"
-                  }`}>
-                  {lead.score}pts
-                </span>
-              )}
-            </div>
-          </div>
+        <h4
+          className="flex-1 font-black text-sm text-foreground leading-snug uppercase tracking-wide cursor-pointer hover:text-primary transition-colors"
+          onClick={() => onClick(lead)}
+        >
+          {lead.name}
+        </h4>
+      </div>
+
+      {/* Meta row: badges + archive/delete */}
+      <div className="flex items-center justify-between px-3 pl-9 pt-1">
+        <div className="flex items-center gap-1.5">
+          <span className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono bg-secondary/60 px-1.5 py-0.5 rounded">
+            <Clock className="h-3 w-3" />{daysAgo}d
+          </span>
+          {lead.score != null && (
+            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${(lead.score || 0) >= 80 ? "bg-emerald-500/20 text-emerald-500" :
+              (lead.score || 0) >= 50 ? "bg-amber-500/20 text-amber-500" :
+                "bg-destructive/20 text-destructive"
+              }`}>
+              {lead.score}pts
+            </span>
+          )}
         </div>
-        {/* Archive / Delete buttons */}
-        <div className="flex flex-col gap-1 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           {showArchived ? (
             <button
               onClick={(e) => { e.stopPropagation(); restoreLead(lead.id); }}
-              className="h-7 w-7 rounded-lg flex items-center justify-center bg-primary/10 hover:bg-primary/20 transition-colors"
+              className="h-6 w-6 rounded-md flex items-center justify-center bg-primary/10 hover:bg-primary/20 transition-colors"
               title="Restaurar Lead"
             >
-              <RotateCcw className="h-3.5 w-3.5 text-primary" />
+              <RotateCcw className="h-3 w-3 text-primary" />
             </button>
           ) : (
             <>
               <button
                 onClick={(e) => { e.stopPropagation(); archiveLead(lead.id); }}
-                className="h-7 w-7 rounded-lg flex items-center justify-center bg-amber-500/10 hover:bg-amber-500/20 transition-colors"
+                className="h-6 w-6 rounded-md flex items-center justify-center bg-amber-500/10 hover:bg-amber-500/20 transition-colors"
                 title="Arquivar Lead"
               >
-                <Archive className="h-3.5 w-3.5 text-amber-500" />
+                <Archive className="h-3 w-3 text-amber-500" />
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); if (confirm("Excluir permanentemente este lead?")) permanentDeleteLead(lead.id); }}
-                className="h-7 w-7 rounded-lg flex items-center justify-center bg-destructive/10 hover:bg-destructive/20 transition-colors"
+                className="h-6 w-6 rounded-md flex items-center justify-center bg-destructive/10 hover:bg-destructive/20 transition-colors"
                 title="Excluir Permanentemente"
               >
-                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                <Trash2 className="h-3 w-3 text-destructive" />
               </button>
             </>
           )}
