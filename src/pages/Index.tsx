@@ -65,8 +65,8 @@ const Index = () => {
 
     const fetchData = async () => {
       setLoading(true);
-      let start = new Date(selectedMonth + "-01");
-      let end = new Date(selectedMonth + "-01");
+      let start = new Date(selectedMonth + "-01T12:00:00");
+      let end = new Date(selectedMonth + "-01T12:00:00");
 
       if (viewMode === 'month') {
         end.setMonth(end.getMonth() + 1);
@@ -75,9 +75,8 @@ const Index = () => {
         end.setFullYear(end.getFullYear() + 1);
         end.setMonth(0);
       } else {
-        start = new Date(customRange.from);
-        end = new Date(customRange.to);
-        end.setHours(23, 59, 59, 999);
+        start = new Date(customRange.from + "T00:00:00");
+        end = new Date(customRange.to + "T23:59:59");
       }
 
       const [leadsRes, followUpsRes, paymentsRes] = await Promise.all([
@@ -101,14 +100,20 @@ const Index = () => {
       const payments = paymentsRes.data || [];
       const now = new Date();
 
+      // Filter leads by the selected period for the stats cards
+      const filteredLeads = leads.filter(l => {
+        const lDate = new Date(l.created_at);
+        return lDate >= start && lDate <= end;
+      });
+
       const nicheMap: Record<string, number> = {};
-      leads.forEach((l) => { if (l.niche) nicheMap[l.niche] = (nicheMap[l.niche] || 0) + 1; });
+      filteredLeads.forEach((l) => { if (l.niche) nicheMap[l.niche] = (nicheMap[l.niche] || 0) + 1; });
       const topNiches = Object.entries(nicheMap)
         .map(([niche, count]) => ({ niche, count }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 5);
 
-      const ratings = leads.filter((l) => l.rating != null).map((l) => Number(l.rating));
+      const ratings = filteredLeads.filter((l) => l.rating != null).map((l) => Number(l.rating));
       const avgRating = ratings.length > 0
         ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)
         : "—";
@@ -158,19 +163,19 @@ const Index = () => {
       const salesByDay = Object.entries(dayMap).map(([date, count]) => ({ date, count }));
 
       const revenue = filteredPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-      const pipelineValue = leads.filter(l => l.status === 'negociando').length * 1500; // Estimated ticket
-      const novos = leads.filter((l) => l.status === "novo").length;
-      const negociando = leads.filter((l) => l.status === "negociando").length;
+      const pipelineValue = filteredLeads.filter(l => l.status === 'negociando').length * 1500; // Estimated ticket
+      const novos = filteredLeads.filter((l) => l.status === "novo").length;
+      const negociando = filteredLeads.filter((l) => l.status === "negociando").length;
 
       setData({
-        totalLeads: leads.length,
-        leadsQuentes: leads.filter((l) => l.status === "contatado").length,
-        contatados: leads.filter((l) => l.status === "contatado" || l.status === "negociando").length,
-        pagos: leads.filter((l) => l.status === "pago").length,
-        perdidos: leads.filter((l) => l.status === "perdido").length,
+        totalLeads: filteredLeads.length,
+        leadsQuentes: filteredLeads.filter((l) => l.status === "contatado").length,
+        contatados: filteredLeads.filter((l) => l.status === "contatado" || l.status === "negociando").length,
+        pagos: filteredLeads.filter((l) => l.status === "pago").length,
+        perdidos: filteredLeads.filter((l) => l.status === "perdido").length,
         novos, proposta: negociando,
-        withPhone: leads.filter((l) => l.has_phone).length,
-        withWebsite: leads.filter((l) => l.has_website).length,
+        withPhone: filteredLeads.filter((l) => l.has_phone).length,
+        withWebsite: filteredLeads.filter((l) => l.has_website).length,
         avgRating,
         pendingFollowUps: followUps.length,
         overdueFollowUps: followUps.filter((f) => new Date(f.due_date) < now).length,
@@ -231,7 +236,7 @@ const Index = () => {
             <PipelineFunnel data={data} />
           </div>
           <div className="xl:col-span-1">
-            <BdrRanking />
+            <BdrRanking selectedMonth={selectedMonth} viewMode={viewMode} customRange={customRange} />
           </div>
         </motion.div>
 

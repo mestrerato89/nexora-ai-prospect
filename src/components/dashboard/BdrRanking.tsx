@@ -22,13 +22,20 @@ function CrownIcon() {
     );
 }
 
-export function BdrRanking() {
+interface BdrRankingProps {
+    selectedMonth: string;
+    viewMode: 'month' | 'year' | 'range';
+    customRange: { from: string; to: string };
+}
+
+export function BdrRanking({ selectedMonth, viewMode, customRange }: BdrRankingProps) {
     const [bdrSummaries, setBdrSummaries] = useState<BdrPerformance[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchRanking = async () => {
             try {
+                setLoading(true);
                 const [profilesRes, paymentsRes] = await Promise.all([
                     supabase.from('profiles').select('*'),
                     supabase.from('payments').select('*').eq('status', 'aprovado')
@@ -40,15 +47,28 @@ export function BdrRanking() {
                 const users = profilesRes.data || [];
                 const payments = paymentsRes.data || [];
 
-                const currentMonth = new Date().toISOString().substring(0, 7);
-                const currentMonthPayments = payments.filter(p => {
+                let start = new Date(selectedMonth + "-01T12:00:00");
+                let end = new Date(selectedMonth + "-01T12:00:00");
+
+                if (viewMode === 'month') {
+                    end.setMonth(end.getMonth() + 1);
+                } else if (viewMode === 'year') {
+                    start.setMonth(0);
+                    end.setFullYear(end.getFullYear() + 1);
+                    end.setMonth(0);
+                } else {
+                    start = new Date(customRange.from + "T00:00:00");
+                    end = new Date(customRange.to + "T23:59:59");
+                }
+
+                const periodPayments = payments.filter(p => {
                     const pDate = new Date(p.created_at);
-                    return `${pDate.getFullYear()}-${String(pDate.getMonth() + 1).padStart(2, '0')}` === currentMonth;
+                    return pDate >= start && pDate <= end;
                 });
 
                 const summaries = users.map(u => {
-                    const bdrSales = currentMonthPayments.filter(p => p.user_id === u.user_id);
-                    const totalSalesVolume = bdrSales.reduce((sum, p) => sum + p.amount, 0);
+                    const bdrSales = periodPayments.filter(p => p.user_id === u.user_id);
+                    const totalSalesVolume = bdrSales.reduce((sum, p) => sum + Number(p.amount), 0);
                     return {
                         id: u.user_id,
                         name: u.display_name || u.email || "Desconhecido",
@@ -66,7 +86,7 @@ export function BdrRanking() {
             }
         };
         fetchRanking();
-    }, []);
+    }, [selectedMonth, viewMode, customRange]);
 
     const maxVolume = bdrSummaries.length > 0 ? bdrSummaries[0].totalSalesVolume : 1;
 
@@ -75,7 +95,10 @@ export function BdrRanking() {
             <CardHeader className="p-5 border-b border-primary/5">
                 <CardTitle className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-muted-foreground flex items-center justify-between">
                     Ranking Vendas
-                    <span className="text-[9px] font-mono text-primary/50">MÊS ATUAL</span>
+                    <span className="text-[9px] font-mono text-primary/50 uppercase">
+                        {viewMode === 'month' ? new Date(selectedMonth + "-15").toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }) :
+                            viewMode === 'year' ? `Ano ${selectedMonth.split('-')[0]}` : 'Período'}
+                    </span>
                 </CardTitle>
             </CardHeader>
             <CardContent className="p-5 flex-1 flex flex-col min-h-[280px]">
