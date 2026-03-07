@@ -31,14 +31,13 @@ export default function Login() {
         <div className="text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
             <svg width="32" height="32" viewBox="0 0 28 28" fill="none" className="text-primary">
-              <circle cx="14" cy="14" r="8" stroke="currentColor" strokeWidth="1.5" fill="none" />
-              <circle cx="14" cy="14" r="2" fill="currentColor" />
-              <line x1="14" y1="2" x2="14" y2="5" stroke="currentColor" strokeWidth="1.5" />
-              <line x1="14" y1="23" x2="14" y2="26" stroke="currentColor" strokeWidth="1.5" />
-              <line x1="2" y1="14" x2="5" y2="14" stroke="currentColor" strokeWidth="1.5" />
-              <line x1="23" y1="14" x2="26" y2="14" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M7 21L14 7L21 21" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M10 16H18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="14" cy="7" r="2" fill="currentColor" />
+              <circle cx="7" cy="21" r="2" fill="currentColor" />
+              <circle cx="21" cy="21" r="2" fill="currentColor" />
             </svg>
-            <span className="text-2xl font-mono font-bold text-foreground">Rataria</span>
+            <span className="text-2xl font-mono font-bold text-foreground">Nexora</span>
           </div>
           <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground">Acesse sua estação</p>
         </div>

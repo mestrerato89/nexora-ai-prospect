@@ -32,10 +32,14 @@ export default function ForgotPassword() {
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center">
-              <Globe className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-2xl font-bold text-foreground">Rataria</span>
+            <svg width="32" height="32" viewBox="0 0 28 28" fill="none" className="text-primary">
+              <path d="M7 21L14 7L21 21" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M10 16H18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="14" cy="7" r="2" fill="currentColor" />
+              <circle cx="7" cy="21" r="2" fill="currentColor" />
+              <circle cx="21" cy="21" r="2" fill="currentColor" />
+            </svg>
+            <span className="text-2xl font-mono font-bold text-foreground">Nexora</span>
           </div>
           <p className="text-sm text-muted-foreground">
             {sent ? "Verifique seu email" : "Recuperar sua senha"}

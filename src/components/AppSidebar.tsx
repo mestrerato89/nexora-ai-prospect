@@ -130,18 +130,17 @@ export function AppSidebar() {
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center">
             <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="text-primary">
-              <circle cx="14" cy="14" r="8" stroke="currentColor" strokeWidth="1.5" fill="none" />
-              <circle cx="14" cy="14" r="2" fill="currentColor" />
-              <line x1="14" y1="2" x2="14" y2="5" stroke="currentColor" strokeWidth="1.5" />
-              <line x1="14" y1="23" x2="14" y2="26" stroke="currentColor" strokeWidth="1.5" />
-              <line x1="2" y1="14" x2="5" y2="14" stroke="currentColor" strokeWidth="1.5" />
-              <line x1="23" y1="14" x2="26" y2="14" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M7 21L14 7L21 21" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M10 16H18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <circle cx="14" cy="7" r="2" fill="currentColor" />
+              <circle cx="7" cy="21" r="2" fill="currentColor" />
+              <circle cx="21" cy="21" r="2" fill="currentColor" />
             </svg>
           </div>
           {!collapsed && (
             <div>
-              <span className="text-base font-mono font-bold tracking-tight text-foreground">Rataria</span>
-              <p className="text-[9px] font-mono tracking-[0.35em] text-muted-foreground uppercase">Intelligence</p>
+              <span className="text-base font-mono font-bold tracking-tight text-foreground">Nexora</span>
+              <p className="text-[9px] font-mono tracking-[0.35em] text-muted-foreground uppercase">AI</p>
             </div>
           )}
         </div>
