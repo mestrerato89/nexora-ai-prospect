@@ -482,18 +482,18 @@ const Finance = () => {
                 </motion.div>
 
                 <Tabs defaultValue="overview" className="space-y-8">
-                    <TabsList className="grid w-full grid-cols-5 max-w-[1000px] h-12 bg-muted/20 p-1 border border-primary/5 rounded-2xl">
+                    <TabsList className="grid w-full grid-cols-6 max-w-[1200px] h-12 bg-muted/20 p-1 border border-primary/5 rounded-2xl">
                         <TabsTrigger value="overview" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-black uppercase tracking-widest text-[10px]">
                             <PieChart className="h-4 w-4 mr-2" />
-                            Painel Principal
+                            Painel
                         </TabsTrigger>
                         <TabsTrigger value="report" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-black uppercase tracking-widest text-[10px]">
                             <BarChart3 className="h-4 w-4 mr-2" />
-                            Relatório Empresa
+                            Relatório
                         </TabsTrigger>
                         <TabsTrigger value="receivables" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-black uppercase tracking-widest text-[10px]">
                             <Receipt className="h-4 w-4 mr-2" />
-                            Vendas Únicas
+                            Vendas
                         </TabsTrigger>
                         <TabsTrigger value="subscriptions" className="rounded-xl data-[state=active]:bg-indigo-500 data-[state=active]:text-white font-black uppercase tracking-widest text-[10px]">
                             <Briefcase className="h-4 w-4 mr-2" />
@@ -502,6 +502,10 @@ const Finance = () => {
                         <TabsTrigger value="expenses" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-black uppercase tracking-widest text-[10px]">
                             <Wallet className="h-4 w-4 mr-2" />
                             Gastos
+                        </TabsTrigger>
+                        <TabsTrigger value="payroll" className="rounded-xl data-[state=active]:bg-emerald-600 data-[state=active]:text-white font-black uppercase tracking-widest text-[10px]">
+                            <Users className="h-4 w-4 mr-2" />
+                            Payroll
                         </TabsTrigger>
                     </TabsList>
 
@@ -1288,6 +1292,130 @@ const Finance = () => {
                                         ))
                                     )}
                                 </TableBody>
+                            </Card>
+                        </motion.div>
+                    </TabsContent>
+
+                    <TabsContent value="payroll" className="space-y-6 outline-none">
+                        <motion.div initial="hidden" animate="visible" variants={itemVariants} className="space-y-6">
+                            {/* Summary cards */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <Card className="bg-emerald-500/5 border-emerald-500/10 rounded-3xl">
+                                    <CardContent className="p-6">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div className="p-2 bg-emerald-500/10 rounded-xl"><Users className="h-5 w-5 text-emerald-500" /></div>
+                                        </div>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Comissões (BDRs)</p>
+                                        <h3 className="text-2xl font-black mt-1 text-emerald-500">R$ {bdrPayout.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+                                        <p className="text-[10px] text-muted-foreground mt-1">25% do Lucro Líquido</p>
+                                    </CardContent>
+                                </Card>
+                                <Card className="bg-primary/5 border-primary/10 rounded-3xl">
+                                    <CardContent className="p-6">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div className="p-2 bg-primary/10 rounded-xl"><Shield className="h-5 w-5 text-primary" /></div>
+                                        </div>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Head Operacional</p>
+                                        <h3 className="text-2xl font-black mt-1">R$ {headPayout.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+                                        <p className="text-[10px] text-muted-foreground mt-1">25% do Lucro Líquido</p>
+                                    </CardContent>
+                                </Card>
+                                <Card className="bg-card/40 border-primary/10 rounded-3xl">
+                                    <CardContent className="p-6">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div className="p-2 bg-muted/30 rounded-xl"><DollarSign className="h-5 w-5 text-muted-foreground" /></div>
+                                        </div>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Folha do Mês</p>
+                                        <h3 className="text-2xl font-black mt-1">R$ {(bdrPayout + headPayout).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+                                        <p className="text-[10px] text-muted-foreground mt-1">BDRs + Head</p>
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            {/* BDR Payroll Table */}
+                            <Card className="rounded-[2.5rem] border-primary/10 bg-card/30 backdrop-blur-md overflow-hidden">
+                                <CardHeader className="p-8 border-b border-primary/10 flex flex-row items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-3 bg-emerald-500/10 rounded-2xl"><Users className="h-6 w-6 text-emerald-500" /></div>
+                                        <div>
+                                            <CardTitle className="text-xl font-black uppercase tracking-tighter">Folha de Pagamento</CardTitle>
+                                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">Comissões individuais por BDR</p>
+                                        </div>
+                                    </div>
+                                    <Badge className="bg-emerald-500/10 text-emerald-500 border-0 text-[10px] font-black uppercase px-3 py-1">
+                                        {bdrSummaries.length} colaborador{bdrSummaries.length !== 1 ? 'es' : ''}
+                                    </Badge>
+                                </CardHeader>
+                                <Table>
+                                    <TableHeader className="bg-muted/20">
+                                        <TableRow className="border-primary/5">
+                                            <TableHead className="text-[10px] uppercase tracking-widest font-black py-5 px-8">Colaborador</TableHead>
+                                            <TableHead className="text-[10px] uppercase tracking-widest font-black py-5">Vendas</TableHead>
+                                            <TableHead className="text-[10px] uppercase tracking-widest font-black py-5">Faturado</TableHead>
+                                            <TableHead className="text-[10px] uppercase tracking-widest font-black py-5">Comissão</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {bdrSummaries.length === 0 ? (
+                                            <TableRow>
+                                                <TableCell colSpan={4} className="py-20 text-center text-muted-foreground opacity-50 italic">
+                                                    Nenhum BDR com vendas neste período.
+                                                </TableCell>
+                                            </TableRow>
+                                        ) : (
+                                            bdrSummaries.map((bdr, idx) => (
+                                                <TableRow key={bdr.id} className="group hover:bg-emerald-500/5 border-primary/5 transition-colors">
+                                                    <TableCell className="py-6 px-8">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="h-9 w-9 rounded-xl bg-emerald-500/10 flex items-center justify-center text-sm font-black text-emerald-500">
+                                                                {idx + 1}º
+                                                            </div>
+                                                            <span className="font-black text-sm">{bdr.name}</span>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="py-6">
+                                                        <Badge variant="outline" className="text-[10px] font-black border-primary/20">{bdr.salesCount} vendas</Badge>
+                                                    </TableCell>
+                                                    <TableCell className="py-6">
+                                                        <span className="font-bold text-sm">R$ {bdr.totalSalesVolume.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                    </TableCell>
+                                                    <TableCell className="py-6">
+                                                        <span className="font-black text-emerald-500 text-lg">R$ {bdr.totalCommission.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        )}
+                                        {bdrSummaries.length > 0 && (
+                                            <TableRow className="bg-emerald-500/5 border-t-2 border-emerald-500/20">
+                                                <TableCell colSpan={2} className="py-6 px-8">
+                                                    <span className="font-black text-sm uppercase tracking-widest">Total</span>
+                                                </TableCell>
+                                                <TableCell className="py-6">
+                                                    <span className="font-black text-sm">R$ {totalSalesPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                </TableCell>
+                                                <TableCell className="py-6">
+                                                    <span className="font-black text-emerald-500 text-lg">R$ {bdrPayout.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </Card>
+
+                            {/* Head Payout Card */}
+                            <Card className="rounded-[2.5rem] border-primary/10 bg-card/30 backdrop-blur-md overflow-hidden">
+                                <CardContent className="p-8 flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-3 bg-primary/10 rounded-2xl"><Shield className="h-6 w-6 text-primary" /></div>
+                                        <div>
+                                            <h4 className="text-sm font-black uppercase tracking-widest">Head Operacional</h4>
+                                            <p className="text-[10px] text-muted-foreground mt-0.5">25% do lucro líquido de R$ {netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-2xl font-black">R$ {headPayout.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                    </div>
+                                </CardContent>
                             </Card>
                         </motion.div>
                     </TabsContent>
