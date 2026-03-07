@@ -10,7 +10,7 @@ interface PeriodSelectorProps {
     setSelectedMonth: (month: string) => void;
     customRange: { from: string; to: string };
     setCustomRange: (range: { from: string; to: string }) => void;
-    title?: string;
+    title?: React.ReactNode;
     subtitle?: string;
     icon?: React.ReactNode;
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
@@ -209,7 +210,18 @@ const Index = () => {
 
   const roleDisplay = profile?.role === 'admin' ? 'Admin' : profile?.role === 'head_operacional' ? 'Head Comercial' : 'BDR';
   const nameDisplay = profile?.display_name ? ` ${profile.display_name.split(' ')[0]}` : '';
-  const greetingText = `${getGreeting().replace(' 👋', '')}${nameDisplay} (${roleDisplay}) 👋`;
+  const greetingText = (
+    <div className="flex items-center gap-2">
+      {getGreeting().replace(' 👋', '')}{nameDisplay}
+      <Badge
+        variant={profile?.role === 'admin' ? "default" : profile?.role === 'head_operacional' ? "outline" : "secondary"}
+        className={profile?.role === 'head_operacional' ? "border-primary text-primary" : ""}
+      >
+        {roleDisplay}
+      </Badge>
+      👋
+    </div>
+  );
 
   return (
     <DashboardLayout>
