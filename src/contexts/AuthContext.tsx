@@ -80,6 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // First check: special admin email
     if (currentUser.email === "huguinhoask@gmail.com") {
       setIsAdmin(true);
+      // Also ensure the profile exists
+      ensureProfileExists(currentUser);
       return;
     }
 
@@ -89,9 +91,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .from('profiles')
         .select('*')
         .eq('user_id', currentUser.id)
-        .single();
+        .maybeSingle();
 
-      if (!error && (data as any)?.role === 'admin') {
+      if (error) {
+        console.error("Error fetching profile:", error);
+        // If there's an RLS or other error, still allow user in (just not admin)
+        setIsAdmin(false);
+        return;
+      }
+
+      // If no profile exists, create one automatically
+      if (!data) {
+        await ensureProfileExists(currentUser);
+        setIsAdmin(false);
+        return;
+      }
+
+      if ((data as any)?.role === 'admin') {
         setIsAdmin(true);
       } else {
         setIsAdmin(false);
@@ -99,6 +115,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error("Error checking role:", err);
       setIsAdmin(false);
+    }
+  };
+
+  const ensureProfileExists = async (currentUser: User) => {
+    try {
+      const { data: existing } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+
+      if (!existing) {
+        await supabase.from('profiles').insert({
+          user_id: currentUser.id,
+          email: currentUser.email || '',
+          display_name: currentUser.user_metadata?.display_name || currentUser.email?.split('@')[0] || 'Usuário',
+        });
+        console.log("Profile auto-created for user:", currentUser.id);
+      }
+    } catch (err) {
+      console.error("Error ensuring profile exists:", err);
     }
   };
 
