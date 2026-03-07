@@ -27,37 +27,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    // Initial check
-    const initAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!mounted) return;
-
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-
-        if (currentUser) {
-          // Check role in background but don't block the initial loading
-          checkAdminRole(currentUser);
-        }
-      } catch (error) {
-        console.error("Error in initAuth:", error);
-      } finally {
-        if (mounted) setLoading(false);
+    // Safety timeout: if auth takes more than 5 seconds, stop loading
+    const timeout = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn("Auth timeout - forcing loading to false");
+        setLoading(false);
       }
-    };
+    }, 5000);
 
-    initAuth();
-
-    // Listen for changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    // Use onAuthStateChange for everything (avoids lock contention with getSession)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
 
       const currentUser = session?.user ?? null;
       setUser(currentUser);
 
       if (currentUser) {
-        await checkAdminRole(currentUser);
+        // Don't await - let it run in background so loading finishes fast
+        checkAdminRole(currentUser).catch(console.error);
       } else {
         setIsAdmin(false);
       }
@@ -67,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       mounted = false;
+      clearTimeout(timeout);
       subscription.unsubscribe();
     };
   }, []);
