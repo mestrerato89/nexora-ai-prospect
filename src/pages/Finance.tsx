@@ -18,7 +18,8 @@ import {
     Trash2,
     Calendar,
     Briefcase,
-    FileText
+    FileText,
+    Users
 } from "lucide-react";
 import {
     Tabs,
@@ -52,25 +53,95 @@ import { useAuth } from "@/contexts/AuthContext";
 
 interface Payment {
     id: string;
-    leadId: string;
-    leadName: string;
-    bdrName: string;
+    lead_id: string;
+    lead_name?: string;
+    bdr_name?: string;
     amount: number;
-    date: string;
+    status: 'pendente' | 'aprovado';
+    include_head: boolean;
+    include_bdr: boolean;
+    user_id: string;
+    created_at: string;
 }
 
 interface Expense {
     id: string;
     type: 'fixo' | 'variavel';
     name: string;
-    description: string;
+    description: string | null;
     amount: number;
     date: string;
 }
 
+interface Subscription {
+    id: string;
+    lead_id: string;
+    lead_name?: string;
+    amount: number;
+    status: 'ativo' | 'cancelado';
+    start_date: string;
+    created_at: string;
+}
+
 const Finance = () => {
-    const { isAdmin, loading } = useAuth();
+    const { isAdmin, loading, user } = useAuth();
     const navigate = useNavigate();
+
+    const [users, setUsers] = useState<any[]>([]);
+    const [leads, setLeads] = useState<any[]>([]);
+    const [payments, setPayments] = useState<Payment[]>([]);
+    const [expenses, setExpenses] = useState<Expense[]>([]);
+    const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+    const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().substring(0, 7)); // YYYY-MM format
+
+    // Form States
+    const [newPayment, setNewPayment] = useState({ leadId: "", amount: 0 });
+    const [newExpense, setNewExpense] = useState({ type: 'fixo' as 'fixo' | 'variavel', name: "", description: "", amount: 0 });
+
+    const fetchData = async () => {
+        try {
+            const [profilesRes, leadsRes, paymentsRes, expensesRes, subsRes] = await Promise.all([
+                supabase.from('profiles').select('*').order('display_name', { ascending: true }),
+                supabase.from('leads').select('*').order('name', { ascending: true }),
+                supabase.from('payments').select('*, leads(name, user_id)').order('created_at', { ascending: false }),
+                supabase.from('expenses').select('*').order('date', { ascending: false }),
+                supabase.from('subscriptions').select('*, leads(name)').order('created_at', { ascending: false })
+            ]);
+
+            if (profilesRes.error) throw profilesRes.error;
+            if (leadsRes.error) throw leadsRes.error;
+            if (paymentsRes.error) throw paymentsRes.error;
+            if (expensesRes.error) throw expensesRes.error;
+            if (subsRes.error) throw subsRes.error;
+
+            setUsers(profilesRes.data || []);
+            setLeads(leadsRes.data || []);
+
+            // Map payments with lead and BDR names
+            const mappedPayments = (paymentsRes.data || []).map(p => {
+                const leadData = (p.leads as any);
+                const bdr = profilesRes.data?.find(u => u.user_id === leadData?.user_id);
+                return {
+                    ...p,
+                    lead_name: leadData?.name || "Lead Desconhecido",
+                    bdr_name: bdr?.display_name || bdr?.email || "BDR não vinculado"
+                } as Payment;
+            });
+            setPayments(mappedPayments);
+
+            // Map subscriptions
+            const mappedSubs = (subsRes.data || []).map(s => ({
+                ...s,
+                lead_name: (s.leads as any)?.name || "Lead Desconhecido"
+            })) as Subscription[];
+            setSubscriptions(mappedSubs);
+
+            setExpenses(expensesRes.data || [] as any);
+        } catch (error: any) {
+            console.error("Erro ao buscar dados:", error);
+            toast.error("Erro ao carregar dados financeiros");
+        }
+    };
 
     useEffect(() => {
         if (!loading && !isAdmin) {
@@ -78,96 +149,156 @@ const Finance = () => {
             toast.error("Acesso negado", {
                 description: "Você não tem permissão para acessar a gestão financeira."
             });
+        } else if (!loading && isAdmin) {
+            fetchData();
         }
     }, [isAdmin, loading, navigate]);
 
-    const [users, setUsers] = useState<any[]>([]);
-    const [leads, setLeads] = useState<any[]>([]);
+    // Financial Calculations (Filtered by Month)
+    const filteredPayments = payments.filter(p => {
+        const pDate = new Date(p.created_at);
+        const pMonth = `${pDate.getFullYear()}-${String(pDate.getMonth() + 1).padStart(2, '0')}`;
+        return pMonth === selectedMonth;
+    });
 
-    // Financial Lists
-    const [payments, setPayments] = useState<Payment[]>([]);
-    const [expenses, setExpenses] = useState<Expense[]>([]);
+    const filteredExpenses = expenses.filter(e => {
+        const eDate = new Date(e.date);
+        const eMonth = `${eDate.getFullYear()}-${String(eDate.getMonth() + 1).padStart(2, '0')}`;
+        return eMonth === selectedMonth;
+    });
 
-    // Form States
-    const [newPayment, setNewPayment] = useState({ leadId: "", amount: 0 });
-    const [newExpense, setNewExpense] = useState({ type: 'fixo' as 'fixo' | 'variavel', name: "", description: "", amount: 0 });
+    const approvedPayments = filteredPayments.filter(p => p.status === 'aprovado');
+    const totalSalesPaid = approvedPayments.reduce((acc, curr) => acc + curr.amount, 0);
 
-    // Calculations
-    const totalRevenue = payments.reduce((acc, curr) => acc + curr.amount, 0);
-    const totalFixed = expenses.filter(e => e.type === 'fixo').reduce((acc, curr) => acc + curr.amount, 0);
-    const totalVariable = expenses.filter(e => e.type === 'variavel').reduce((acc, curr) => acc + curr.amount, 0);
-    const totalExpenses = totalFixed + totalVariable;
-    const netProfit = Math.max(0, totalRevenue - totalExpenses);
+    const activeSubs = subscriptions.filter(s => {
+        if (s.status !== 'ativo') return false;
 
+        // Ensure we only count the recurrence if we are looking at a month equal to or AFTER it started
+        const sMonth = s.start_date ? s.start_date.substring(0, 7) : s.created_at.substring(0, 7);
+        return selectedMonth >= sMonth;
+    });
+    const totalRecurring = activeSubs.reduce((acc, curr) => acc + curr.amount, 0);
+
+    // Total revenue in the month = Setup/Single Sales in the month + CURRENT MRR (since MRR is paid every month)
+    const totalRevenue = totalSalesPaid + totalRecurring;
+
+    const totalFixed = filteredExpenses.filter(e => e.type === 'fixo').reduce((acc, curr) => acc + curr.amount, 0);
+    const totalVariable = filteredExpenses.filter(e => e.type === 'variavel').reduce((acc, curr) => acc + curr.amount, 0);
+    const totalExpensesAndCosts = totalFixed + totalVariable;
+
+    // NOVO MODELO (Opcionalidade de Lucro Real): Tira CUSTOS PRIMEIRO
+    const profitBeforeCommissions = totalRevenue - totalExpensesAndCosts;
+    const netProfit = profitBeforeCommissions > 0 ? profitBeforeCommissions : 0; // The true cash pool for profit sharing
+
+    // Commission logic based on the actual profit divided between parties
+    // Head: 25% of the Net Profit
+    // BDR:  25% of the Net Profit
+    // Comp: 50% of the Net Profit
     const headPayout = netProfit * 0.25;
     const bdrPayout = netProfit * 0.25;
     const companyRetention = netProfit * 0.50;
 
-    const fetchData = async () => {
-        try {
-            const [profilesRes, leadsRes] = await Promise.all([
-                supabase.from('profiles').select('*').order('display_name', { ascending: true }),
-                supabase.from('leads').select('*').order('name', { ascending: true })
-            ]);
+    // BDR Performance Summary
+    const bdrSummaries = users.map(u => {
+        // Vendas aprovadas por esse BDR neste mês específico
+        const bdrSales = approvedPayments.filter(p => p.user_id === u.user_id);
+        const totalSalesVolume = bdrSales.reduce((sum, p) => sum + p.amount, 0);
 
-            if (profilesRes.error) throw profilesRes.error;
-            if (leadsRes.error) throw leadsRes.error;
+        // As commissions are now global off the profit pool, we approximate individual share
+        // based on how much % of the total sales volume this individual BDR brought in.
+        const bdrSharePercentage = totalSalesPaid > 0 ? (totalSalesVolume / totalSalesPaid) : 0;
+        const totalCommission = netProfit > 0 ? (bdrPayout * bdrSharePercentage) : 0;
 
-            setUsers(profilesRes.data || []);
-            setLeads(leadsRes.data || []);
-        } catch (error: any) {
-            console.error("Erro ao buscar dados:", error);
-        }
-    };
+        return {
+            id: u.user_id,
+            name: u.display_name || u.email,
+            totalSalesVolume,
+            totalCommission,
+            salesCount: bdrSales.length
+        };
+    }).filter(summary => summary.totalSalesVolume > 0 || summary.totalCommission > 0)
+        .sort((a, b) => b.totalSalesVolume - a.totalSalesVolume); // Sort desc
 
-    useEffect(() => {
-        if (!loading && isAdmin) {
-            fetchData();
-        }
-    }, [isAdmin, loading]);
-
-    const handleAddPayment = () => {
-        if (!newPayment.leadId || newPayment.amount <= 0) {
+    const handleAddPayment = async () => {
+        if (!newPayment.leadId || newPayment.amount <= 0 || !user) {
             toast.error("Selecione um lead e um valor válido");
             return;
         }
 
-        const selectedLead = leads.find(l => l.id === newPayment.leadId);
-        const bdr = users.find(u => u.user_id === selectedLead?.user_id);
-
-        const payment: Payment = {
-            id: crypto.randomUUID(),
-            leadId: newPayment.leadId,
-            leadName: selectedLead?.name || "Lead Desconhecido",
-            bdrName: bdr?.display_name || bdr?.email || "BDR não vinculado",
+        const { error } = await supabase.from('payments').insert({
+            lead_id: newPayment.leadId,
             amount: newPayment.amount,
-            date: new Date().toISOString()
-        };
+            status: 'pendente',
+            include_head: true,
+            include_bdr: true,
+            user_id: user.id
+        });
 
-        setPayments([payment, ...payments]);
+        if (error) {
+            toast.error("Erro ao registrar pagamento: " + error.message);
+            return;
+        }
+
         setNewPayment({ leadId: "", amount: 0 });
-        toast.success("Recebimento registrado!");
+        toast.success("Recebimento registrado e aguardando aprovação!");
+        fetchData();
     };
 
-    const handleAddExpense = () => {
+    const approvePayment = async (id: string) => {
+        const { error } = await supabase.from('payments')
+            .update({ status: 'aprovado', approved_at: new Date().toISOString() })
+            .eq('id', id);
+
+        if (error) {
+            toast.error("Erro ao aprovar: " + error.message);
+            return;
+        }
+
+        toast.success("Pagamento aprovado!");
+        fetchData();
+    };
+
+    const handleAddExpense = async () => {
         if (!newExpense.name || newExpense.amount <= 0) {
             toast.error("Preencha o nome e o valor do gasto");
             return;
         }
 
-        const expense: Expense = {
-            id: crypto.randomUUID(),
+        const { error } = await supabase.from('expenses').insert({
             ...newExpense,
-            date: new Date().toISOString()
-        };
+            date: new Date().toISOString().split('T')[0]
+        });
 
-        setExpenses([expense, ...expenses]);
+        if (error) {
+            toast.error("Erro ao registrar gasto: " + error.message);
+            return;
+        }
+
         setNewExpense({ type: 'fixo', name: "", description: "", amount: 0 });
         toast.success("Gasto registrado!");
+        fetchData();
     };
 
-    const removePayment = (id: string) => setPayments(payments.filter(p => p.id !== id));
-    const removeExpense = (id: string) => setExpenses(expenses.filter(e => e.id !== id));
+    const removePayment = async (id: string) => {
+        const { error } = await supabase.from('payments').delete().eq('id', id);
+        if (error) toast.error("Erro ao remover: " + error.message);
+        else fetchData();
+    };
+
+    const removeExpense = async (id: string) => {
+        const { error } = await supabase.from('expenses').delete().eq('id', id);
+        if (error) toast.error("Erro ao remover: " + error.message);
+        else fetchData();
+    };
+
+    const toggleSubscriptionStatus = async (id: string, newStatus: 'ativo' | 'cancelado') => {
+        const { error } = await supabase.from('subscriptions').update({ status: newStatus }).eq('id', id);
+        if (error) toast.error("Erro ao atualizar: " + error.message);
+        else {
+            toast.success(`Recorrência ${newStatus}!`);
+            fetchData();
+        }
+    };
 
     if (loading || !isAdmin) return null;
 
@@ -191,6 +322,14 @@ const Finance = () => {
                     </div>
 
                     <div className="flex bg-muted/30 p-1 rounded-2xl border border-primary/5">
+                        <div className="px-4 py-2 border-r border-primary/5 flex items-center justify-center">
+                            <Input
+                                type="month"
+                                value={selectedMonth}
+                                onChange={(e) => setSelectedMonth(e.target.value)}
+                                className="h-8 bg-transparent border-0 text-sm font-black w-auto p-0 cursor-pointer text-center"
+                            />
+                        </div>
                         <div className="px-4 py-2 text-center border-r border-primary/5">
                             <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Saldo Líquido</p>
                             <p className="text-lg font-black text-emerald-500">R$ {netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
@@ -203,18 +342,22 @@ const Finance = () => {
                 </motion.div>
 
                 <Tabs defaultValue="overview" className="space-y-8">
-                    <TabsList className="grid w-full grid-cols-3 max-w-[600px] h-12 bg-muted/20 p-1 border border-primary/5 rounded-2xl">
+                    <TabsList className="grid w-full grid-cols-4 max-w-[800px] h-12 bg-muted/20 p-1 border border-primary/5 rounded-2xl">
                         <TabsTrigger value="overview" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-black uppercase tracking-widest text-[10px]">
                             <PieChart className="h-4 w-4 mr-2" />
-                            Painel Canal de Vendas
+                            Painel Principal
                         </TabsTrigger>
                         <TabsTrigger value="receivables" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-black uppercase tracking-widest text-[10px]">
                             <Receipt className="h-4 w-4 mr-2" />
-                            Pagamentos Leads
+                            Vendas Únicas
+                        </TabsTrigger>
+                        <TabsTrigger value="subscriptions" className="rounded-xl data-[state=active]:bg-indigo-500 data-[state=active]:text-white font-black uppercase tracking-widest text-[10px]">
+                            <Briefcase className="h-4 w-4 mr-2" />
+                            Recorrências
                         </TabsTrigger>
                         <TabsTrigger value="expenses" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-black uppercase tracking-widest text-[10px]">
                             <Wallet className="h-4 w-4 mr-2" />
-                            Gestão de Gastos
+                            Gastos
                         </TabsTrigger>
                     </TabsList>
 
@@ -281,7 +424,7 @@ const Finance = () => {
                                             <div>
                                                 <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1">Head Op.</p>
                                                 <p className="text-xl font-black">R$ {headPayout.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                                                <Badge variant="outline" className="mt-2 text-[8px] border-primary/20 uppercase">25% do Lucro</Badge>
+                                                <Badge variant="outline" className="mt-2 text-[8px] border-primary/20 uppercase">25% do Lucro Líquido</Badge>
                                             </div>
                                         </div>
                                         <div className="space-y-3 text-center p-6 rounded-3xl bg-emerald-500/5 border border-emerald-500/10 group hover:bg-emerald-500/10 transition-all scale-110 shadow-2xl shadow-emerald-500/5 ring-1 ring-emerald-500/20">
@@ -289,7 +432,7 @@ const Finance = () => {
                                             <div>
                                                 <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1">Comissão BDR</p>
                                                 <p className="text-xl font-black text-emerald-500">R$ {bdrPayout.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                                                <Badge variant="outline" className="mt-2 text-[8px] bg-emerald-500/10 border-emerald-500/20 text-emerald-500 uppercase">25% do Lucro</Badge>
+                                                <Badge variant="outline" className="mt-2 text-[8px] bg-emerald-500/10 border-emerald-500/20 text-emerald-500 uppercase">25% do Lucro Líquido</Badge>
                                             </div>
                                         </div>
                                         <div className="space-y-3 text-center p-6 rounded-3xl bg-secondary/20 border border-border group hover:bg-secondary/30 transition-all">
@@ -297,13 +440,13 @@ const Finance = () => {
                                             <div>
                                                 <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1">Empresa</p>
                                                 <p className="text-xl font-black">R$ {companyRetention.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                                                <Badge variant="outline" className="mt-2 text-[8px] border-border uppercase">50% Retido</Badge>
+                                                <Badge variant="outline" className="mt-2 text-[8px] border-border uppercase">50% do Lucro Líquido</Badge>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div className="p-4 bg-muted/20 rounded-2xl border border-dashed border-border text-center">
-                                        <p className="text-[10px] text-muted-foreground font-medium italic">"A regra de payout divide 50% do lucro entre a operação (Head e BDR) e retém 50% para reinvestimento."</p>
+                                        <p className="text-[10px] text-muted-foreground font-medium italic">"A divisão agora calcula a margem líquida. Todos os faturamentos são agrupados, as despesas do mês são subtraídas, e o restante (Lucro Líquido) é repartido."</p>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -318,20 +461,20 @@ const Finance = () => {
                                     </CardHeader>
                                     <CardContent>
                                         <div className="space-y-4">
-                                            {payments.slice(0, 3).map(p => (
+                                            {filteredPayments.slice(0, 3).map(p => (
                                                 <div key={p.id} className="flex items-center justify-between p-3 bg-background/40 rounded-2xl border border-border/50 group hover:border-emerald-500/20 transition-all">
                                                     <div className="flex items-center gap-3">
                                                         <div className="p-2 bg-emerald-500/10 rounded-xl group-hover:scale-110 transition-transform"><Plus className="h-4 w-4 text-emerald-500" /></div>
                                                         <div>
-                                                            <p className="text-sm font-bold">{p.leadName}</p>
-                                                            <p className="text-[9px] text-muted-foreground uppercase font-black">BDR: {p.bdrName}</p>
+                                                            <p className="text-sm font-bold">{p.lead_name}</p>
+                                                            <p className="text-[9px] text-muted-foreground uppercase font-black">BDR: {p.bdr_name}</p>
                                                         </div>
                                                     </div>
                                                     <p className="font-black text-emerald-500">R$ {p.amount.toLocaleString('pt-BR')}</p>
                                                 </div>
                                             ))}
-                                            {payments.length === 0 && (
-                                                <div className="py-8 text-center opacity-40 italic text-xs">Nenhuma venda registrada este mês.</div>
+                                            {filteredPayments.length === 0 && (
+                                                <div className="py-8 text-center opacity-40 italic text-xs">Nenhuma venda registrada neste mês.</div>
                                             )}
                                         </div>
                                     </CardContent>
@@ -346,7 +489,7 @@ const Finance = () => {
                                     </CardHeader>
                                     <CardContent>
                                         <div className="space-y-4">
-                                            {expenses.slice(0, 3).map(e => (
+                                            {filteredExpenses.slice(0, 3).map(e => (
                                                 <div key={e.id} className="flex items-center justify-between p-3 bg-background/40 rounded-2xl border border-border/50 group hover:border-destructive/20 transition-all">
                                                     <div className="flex items-center gap-3">
                                                         <div className={`p-2 rounded-xl group-hover:scale-110 transition-transform ${e.type === 'fixo' ? 'bg-destructive/10' : 'bg-amber-500/10'}`}>
@@ -360,8 +503,46 @@ const Finance = () => {
                                                     <p className="font-black text-destructive">R$ -{e.amount.toLocaleString('pt-BR')}</p>
                                                 </div>
                                             ))}
-                                            {expenses.length === 0 && (
-                                                <div className="py-8 text-center opacity-40 italic text-xs">Nenhum gasto registrado.</div>
+                                            {filteredExpenses.length === 0 && (
+                                                <div className="py-8 text-center opacity-40 italic text-xs">Nenhum gasto registrado neste mês.</div>
+                                            )}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="rounded-[2.5rem] border-primary/10 bg-card/30 overflow-hidden md:col-span-2 lg:col-span-1">
+                                    <CardHeader className="pb-2">
+                                        <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center justify-between">
+                                            Ranking BDRs do Mês
+                                            <Users className="h-4 w-4 text-primary" />
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-4">
+                                            {bdrSummaries.length === 0 ? (
+                                                <div className="py-8 text-center opacity-40 italic text-xs">Nenhum BDR com faturamento neste mês.</div>
+                                            ) : (
+                                                bdrSummaries.map((bdr, idx) => (
+                                                    <div key={bdr.id} className="flex flex-col p-3 bg-background/40 rounded-2xl border border-border/50">
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-[10px] font-black text-muted-foreground w-4">{idx + 1}º</span>
+                                                                <p className="text-sm font-bold truncate max-w-[120px]">{bdr.name}</p>
+                                                            </div>
+                                                            <Badge className="bg-primary/10 text-primary border-0 text-[9px] font-black uppercase">{bdr.salesCount} vendas</Badge>
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-2 mt-1">
+                                                            <div className="bg-muted/30 rounded-xl p-2 text-center">
+                                                                <p className="text-[8px] text-muted-foreground font-black uppercase tracking-widest">Faturado</p>
+                                                                <p className="text-xs font-black text-foreground">R$ {bdr.totalSalesVolume.toLocaleString('pt-BR')}</p>
+                                                            </div>
+                                                            <div className="bg-emerald-500/5 rounded-xl p-2 text-center">
+                                                                <p className="text-[8px] text-emerald-500/60 font-black uppercase tracking-widest">Comissão Paga</p>
+                                                                <p className="text-xs font-black text-emerald-500">R$ {bdr.totalCommission.toLocaleString('pt-BR')}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))
                                             )}
                                         </div>
                                     </CardContent>
@@ -421,18 +602,20 @@ const Finance = () => {
                                         <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 px-6">Lead / Cliente</TableHead>
                                         <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Responsável (BDR)</TableHead>
                                         <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Valor Liq.</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Comissionamento</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Status</TableHead>
                                         <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 text-right px-6">Ações</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {payments.length === 0 ? (
+                                    {filteredPayments.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={4} className="py-20 text-center text-muted-foreground opacity-50 italic">
-                                                Nenhum recebimento registrado. Adicione o faturamento na lateral.
+                                            <TableCell colSpan={6} className="py-20 text-center text-muted-foreground opacity-50 italic">
+                                                Nenhum recebimento registrado neste mês. Altere a data no topo ou adicione o faturamento na lateral.
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        payments.map(p => (
+                                        filteredPayments.map(p => (
                                             <TableRow key={p.id} className="group hover:bg-primary/5 border-primary/5 transition-colors">
                                                 <TableCell className="py-6 px-6">
                                                     <div className="flex items-center gap-3">
@@ -440,23 +623,141 @@ const Finance = () => {
                                                             <Briefcase className="h-4 w-4 text-primary" />
                                                         </div>
                                                         <div className="flex flex-col">
-                                                            <span className="font-black text-sm">{p.leadName}</span>
+                                                            <span className="font-black text-sm">{p.lead_name}</span>
                                                             <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                                                                 <Calendar className="h-3 w-3" />
-                                                                {new Date(p.date).toLocaleDateString()}
+                                                                {new Date(p.created_at).toLocaleDateString()}
                                                             </span>
                                                         </div>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="py-6">
-                                                    <Badge variant="outline" className="border-primary/20 bg-primary/5 text-primary text-[10px] font-black">{p.bdrName}</Badge>
+                                                    <Badge variant="outline" className="border-primary/20 bg-primary/5 text-primary text-[10px] font-black">{p.bdr_name}</Badge>
                                                 </TableCell>
                                                 <TableCell className="py-6">
-                                                    <span className="font-black text-emerald-500">R$ {p.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                    {p.status === 'pendente' ? (
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-muted-foreground mr-1">R$</span>
+                                                            <Input
+                                                                type="number"
+                                                                className="h-8 w-24 bg-background/50 border-primary/20 text-xs font-black p-1 text-center rounded-lg"
+                                                                value={p.amount}
+                                                                onChange={async (e) => {
+                                                                    const val = Number(e.target.value);
+                                                                    setPayments(prev => prev.map(item => item.id === p.id ? { ...item, amount: val } : item));
+                                                                    await supabase.from('payments').update({ amount: val }).eq('id', p.id);
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <span className="font-black text-emerald-500">R$ {p.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="py-6">
+                                                    <div className="flex flex-col gap-2">
+                                                        <label className="flex items-center gap-2 text-[9px] font-bold text-muted-foreground uppercase cursor-pointer group/label">
+                                                            <div className="w-4 h-4 rounded-[4px] border border-primary/30 flex items-center justify-center bg-background/50 overflow-hidden">
+                                                                <input type="checkbox" className="w-full h-full appearance-none checked:bg-emerald-500 transition-colors" checked={p.include_bdr} onChange={async (e) => {
+                                                                    const val = e.target.checked;
+                                                                    setPayments(prev => prev.map(item => item.id === p.id ? { ...item, include_bdr: val } : item));
+                                                                    await supabase.from('payments').update({ include_bdr: val }).eq('id', p.id);
+                                                                }} disabled={p.status === 'aprovado'} />
+                                                            </div>
+                                                            <span className="group-hover/label:text-emerald-500 transition-colors">Comissão BDR (25%)</span>
+                                                        </label>
+                                                        <label className="flex items-center gap-2 text-[9px] font-bold text-muted-foreground uppercase cursor-pointer group/label">
+                                                            <div className="w-4 h-4 rounded-[4px] border border-primary/30 flex items-center justify-center bg-background/50 overflow-hidden">
+                                                                <input type="checkbox" className="w-full h-full appearance-none checked:bg-emerald-500 transition-colors" checked={p.include_head} onChange={async (e) => {
+                                                                    const val = e.target.checked;
+                                                                    setPayments(prev => prev.map(item => item.id === p.id ? { ...item, include_head: val } : item));
+                                                                    await supabase.from('payments').update({ include_head: val }).eq('id', p.id);
+                                                                }} disabled={p.status === 'aprovado'} />
+                                                            </div>
+                                                            <span className="group-hover/label:text-emerald-500 transition-colors">Comissão Head (25%)</span>
+                                                        </label>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="py-6">
+                                                    <Badge className={p.status === 'aprovado' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20"}>
+                                                        {p.status === 'aprovado' ? 'Validado' : 'Análise'}
+                                                    </Badge>
                                                 </TableCell>
                                                 <TableCell className="py-6 text-right px-6">
-                                                    <Button variant="ghost" size="icon" className="rounded-xl hover:bg-destructive/10 hover:text-destructive active:scale-90 transition-all" onClick={() => removePayment(p.id)}>
-                                                        <Trash2 className="h-4 w-4" />
+                                                    <div className="flex justify-end gap-2">
+                                                        {p.status === 'pendente' && (
+                                                            <Button
+                                                                size="sm"
+                                                                className="h-8 bg-emerald-500 hover:bg-emerald-600 font-bold px-3 rounded-lg text-[10px] uppercase tracking-wider"
+                                                                onClick={() => approvePayment(p.id)}
+                                                            >
+                                                                Aprovar
+                                                            </Button>
+                                                        )}
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive active:scale-90 transition-all" onClick={() => removePayment(p.id)}>
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Card>
+                        </motion.div>
+                    </TabsContent>
+
+                    <TabsContent value="subscriptions" className="space-y-6 outline-none">
+                        <motion.div initial="hidden" animate="visible" variants={itemVariants} className="grid grid-cols-1 gap-6">
+                            <Card className="rounded-[2.5rem] border-indigo-500/10 bg-indigo-500/5 overflow-hidden">
+                                <CardHeader className="bg-indigo-500/5 p-6 border-b border-indigo-500/10">
+                                    <CardTitle className="text-lg font-black tracking-tight text-indigo-500 uppercase flex items-center justify-between">
+                                        Carteira de Recorrências Mensais (MRR)
+                                        <Badge className="bg-indigo-500/20 text-indigo-500 border-0 h-8 px-4 text-xs font-black uppercase">
+                                            MRR Atual: R$ {totalRecurring.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                        </Badge>
+                                    </CardTitle>
+                                </CardHeader>
+                                <TableHeader className="bg-muted/30">
+                                    <TableRow className="border-indigo-500/5 hover:bg-transparent">
+                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 px-6">Cliente</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Vínculo Inicial</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Valor Mensal (R$)</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Status</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 text-right px-6">Ações</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {subscriptions.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="py-20 text-center text-muted-foreground opacity-50 italic">
+                                                Nenhum cliente recorrente registrado ainda.
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        subscriptions.map(s => (
+                                            <TableRow key={s.id} className="group hover:bg-indigo-500/5 border-indigo-500/5 transition-colors">
+                                                <TableCell className="py-6 px-6">
+                                                    <span className="font-black text-sm">{s.lead_name}</span>
+                                                </TableCell>
+                                                <TableCell className="py-6">
+                                                    <span className="text-xs font-bold text-muted-foreground font-mono">{new Date(s.start_date).toLocaleDateString()}</span>
+                                                </TableCell>
+                                                <TableCell className="py-6">
+                                                    <span className="font-black text-indigo-500">R$ {s.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / mês</span>
+                                                </TableCell>
+                                                <TableCell className="py-6">
+                                                    <Badge className={s.status === 'ativo' ? "bg-indigo-500/10 text-indigo-500 border-indigo-500/20" : "bg-destructive/10 text-destructive border-destructive/20"}>
+                                                        {s.status === 'ativo' ? 'Ativo' : 'Cancelado'}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="py-6 text-right px-6">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-[10px] font-bold tracking-widest uppercase hover:bg-background/50 h-8 px-4 border rounded-xl"
+                                                        onClick={() => toggleSubscriptionStatus(s.id, s.status === 'ativo' ? 'cancelado' : 'ativo')}
+                                                    >
+                                                        {s.status === 'ativo' ? 'Cancelar' : 'Reativar'}
                                                     </Button>
                                                 </TableCell>
                                             </TableRow>
@@ -537,14 +838,14 @@ const Finance = () => {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {expenses.length === 0 ? (
+                                    {filteredExpenses.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={5} className="py-20 text-center text-muted-foreground opacity-50 italic">
-                                                Nenhuma despesa lançada. Use o formulário à esquerda.
+                                                Nenhuma despesa lançada neste mês. Use o formulário à esquerda.
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        expenses.map(e => (
+                                        filteredExpenses.map(e => (
                                             <TableRow key={e.id} className="group hover:bg-destructive/5 border-primary/5 transition-colors">
                                                 <TableCell className="py-6 px-6">
                                                     <div className="flex items-center gap-3">
@@ -586,7 +887,7 @@ const Finance = () => {
                     </div>
                     <div className="space-y-1">
                         <h4 className="text-xs font-black tracking-[0.3em] text-foreground uppercase opacity-80">Ambiente Administrativo Seguro</h4>
-                        <p className="text-[11px] text-muted-foreground font-medium">As informações financeiras, recebimentos de leads e lançamentos de custos são protegidos por criptografia e visíveis apenas para Administradores Master da Nexora Intelligence.</p>
+                        <p className="text-[11px] text-muted-foreground font-medium">As informações financeiras, recebimentos de leads e lançamentos de custos são protegidos por criptografia e visíveis apenas para Administradores Master da Rataria Intelligence.</p>
                     </div>
                 </motion.div>
             </div>

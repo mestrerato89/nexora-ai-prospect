@@ -1,51 +1,33 @@
-const Database = require("better-sqlite3");
-const path = require("path");
+const fs = require('fs');
+const path = require('path');
 
-const DB_PATH = path.join(__dirname, "nexora_leads.db");
+const DB_PATH = path.join(__dirname, "nexora_leads_db.json");
 
-function getDB() {
-  return new Database(DB_PATH);
-}
+let memoryDB = {
+  leads: [],
+  search_cache: []
+};
 
 function initDB() {
-  const db = getDB();
-
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS leads (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      address TEXT,
-      phone TEXT,
-      website TEXT,
-      rating REAL DEFAULT 0,
-      reviews INTEGER DEFAULT 0,
-      category TEXT,
-      hours TEXT,
-      is_open INTEGER DEFAULT 1,
-      search_term TEXT,
-      search_city TEXT,
-      extracted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      status TEXT DEFAULT 'Novo',
-      notes TEXT,
-      tags TEXT,
-      score INTEGER DEFAULT 0,
-      UNIQUE(name, address)
-    );
-
-    CREATE TABLE IF NOT EXISTS search_cache (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      search_key TEXT UNIQUE NOT NULL,
-      results_json TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_leads_search ON leads(search_term, search_city);
-    CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
-    CREATE INDEX IF NOT EXISTS idx_cache_key ON search_cache(search_key);
-  `);
-
-  db.close();
+  if (fs.existsSync(DB_PATH)) {
+    try {
+      const data = fs.readFileSync(DB_PATH, 'utf8');
+      memoryDB = JSON.parse(data);
+    } catch (e) {
+      console.error("[DB] Failed to load JSON DB", e);
+    }
+  } else {
+    saveDB();
+  }
   console.log("[DB] Banco inicializado:", DB_PATH);
+}
+
+function saveDB() {
+  try {
+    fs.writeFileSync(DB_PATH, JSON.stringify(memoryDB, null, 2));
+  } catch (e) {
+    console.error("[DB] Failed to save JSON DB", e);
+  }
 }
 
 function calculateScore(lead) {
@@ -62,59 +44,79 @@ function calculateScore(lead) {
 }
 
 function saveLeads(leads, searchTerm, searchCity) {
-  const db = getDB();
-  const insert = db.prepare(`
-    INSERT OR IGNORE INTO leads (name, address, phone, website, rating, reviews, category, hours, is_open, search_term, search_city, score)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
   const saved = [];
-  const insertMany = db.transaction((items) => {
-    for (const lead of items) {
-      const score = calculateScore(lead);
-      const result = insert.run(
-        lead.name, lead.address || "", lead.phone || "", lead.website || "",
-        lead.rating || 0, lead.reviews || 0, lead.category || "",
-        lead.hours || "", lead.open ? 1 : 0, searchTerm, searchCity, score
-      );
+
+  for (const lead of leads) {
+    const score = calculateScore(lead);
+
+    // Check if exists
+    const exists = memoryDB.leads.find(l => l.name === lead.name && l.address === (lead.address || ""));
+    if (!exists) {
+      const newLead = {
+        id: `local-${Date.now()}-${memoryDB.leads.length}`,
+        name: lead.name,
+        address: lead.address || "",
+        phone: lead.phone || "",
+        website: lead.website || "",
+        rating: lead.rating || 0,
+        reviews: lead.reviews || 0,
+        category: lead.category || "",
+        hours: lead.hours || "",
+        is_open: lead.open ? 1 : 0,
+        search_term: searchTerm,
+        search_city: searchCity,
+        score: score,
+        extracted_at: new Date().toISOString()
+      };
+      memoryDB.leads.push(newLead);
+
       saved.push({
         ...lead,
-        id: `local-${result.lastInsertRowid || Date.now()}-${saved.length}`,
+        id: newLead.id,
         score,
         confidence: lead.phone || lead.website ? "high" : "medium",
       });
     }
-  });
+  }
 
-  insertMany(leads);
-  db.close();
-
+  saveDB();
   console.log(`[DB] ${saved.length} leads salvos`);
   return saved;
 }
 
 function getSearchCache(searchKey, maxAgeHours) {
-  const db = getDB();
-  const row = db.prepare(`
-    SELECT results_json, created_at FROM search_cache 
-    WHERE search_key = ? 
-    AND created_at > datetime('now', ?)
-  `).get(searchKey, `-${maxAgeHours} hours`);
-  db.close();
+  const cache = memoryDB.search_cache.find(c => c.search_key === searchKey);
+  if (!cache) return null;
 
-  if (row) {
-    try { return JSON.parse(row.results_json); } catch { return null; }
+  const maxAgeMs = maxAgeHours * 60 * 60 * 1000;
+  const age = Date.now() - new Date(cache.created_at).getTime();
+
+  if (age > maxAgeMs) return null;
+
+  try {
+    return JSON.parse(cache.results_json);
+  } catch {
+    return null;
   }
-  return null;
 }
 
 function saveSearchCache(searchKey, results) {
-  const db = getDB();
-  db.prepare(`
-    INSERT OR REPLACE INTO search_cache (search_key, results_json, created_at)
-    VALUES (?, ?, CURRENT_TIMESTAMP)
-  `).run(searchKey, JSON.stringify(results));
-  db.close();
+  let cache = memoryDB.search_cache.find(c => c.search_key === searchKey);
+  if (cache) {
+    cache.results_json = JSON.stringify(results);
+    cache.created_at = new Date().toISOString();
+  } else {
+    memoryDB.search_cache.push({
+      search_key: searchKey,
+      results_json: JSON.stringify(results),
+      created_at: new Date().toISOString()
+    });
+  }
+  saveDB();
 }
 
-module.exports = { initDB, saveLeads, getSearchCache, saveSearchCache };
+function __getMemoryDB() {
+  return memoryDB;
+}
+
+module.exports = { initDB, saveLeads, getSearchCache, saveSearchCache, __getMemoryDB };

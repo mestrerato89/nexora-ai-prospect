@@ -16,7 +16,7 @@ export const useTheme = () => useContext(ThemeContext);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
-    const saved = localStorage.getItem("nexora-theme");
+    const saved = localStorage.getItem("rataria-theme");
     return (saved === "light" ? "light" : "dark") as Theme;
   });
 
@@ -27,7 +27,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     } else {
       root.classList.remove("light");
     }
-    localStorage.setItem("nexora-theme", theme);
+    localStorage.setItem("rataria-theme", theme);
   }, [theme]);
 
   const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));

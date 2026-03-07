@@ -10,6 +10,7 @@ import { QuickProspection } from "@/components/dashboard/QuickProspection";
 import { RecentProjects } from "@/components/dashboard/RecentProjects";
 import { NewsSection } from "@/components/dashboard/NewsSection";
 import { StatsRow } from "@/components/dashboard/StatsRow";
+import { BdrRanking } from "@/components/dashboard/BdrRanking";
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -128,7 +129,7 @@ const Index = () => {
         <motion.div variants={itemVariants}>
           <h1 className="text-2xl font-bold text-foreground">{getGreeting()}</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Bem-vindo ao Nexora! Seu dashboard local está pronto. 🚀
+            Bem-vindo ao Rataria! Seu dashboard local está pronto. 🚀
           </p>
         </motion.div>
 
@@ -136,12 +137,17 @@ const Index = () => {
           <StatsRow data={data} />
         </motion.div>
 
-        {/* Main grid: chart + pipeline */}
-        <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2">
+        {/* Main grid: chart + pipeline + ranking */}
+        <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="xl:col-span-2">
             <PerformanceChart data={data.leadsByDay} />
           </div>
-          <PipelineFunnel data={data} />
+          <div className="xl:col-span-1">
+            <PipelineFunnel data={data} />
+          </div>
+          <div className="xl:col-span-1">
+            <BdrRanking />
+          </div>
         </motion.div>
 
         {/* Second row: follow-ups + quick prospection */}

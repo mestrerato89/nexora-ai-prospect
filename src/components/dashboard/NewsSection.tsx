@@ -49,7 +49,7 @@ const newsItems: NewsItem[] = [
   },
   {
     title: "Biblioteca de Estudos",
-    description: "Guias e manuais práticos para vender apps e usar a Nexora.",
+    description: "Guias e manuais práticos para vender apps e usar a Rataria.",
     icon: BookOpen,
   },
 ];
@@ -60,7 +60,7 @@ export function NewsSection() {
       <div className="flex items-center gap-2 mb-1">
         <Globe className="h-5 w-5 text-primary" />
         <h2 className="text-xl font-bold text-foreground">
-          Novidades da Nexora 🚀
+          Novidades da Rataria 🚀
         </h2>
       </div>
       <p className="text-sm text-muted-foreground mb-5">

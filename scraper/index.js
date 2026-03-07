@@ -199,16 +199,27 @@ app.get("/api/search/status", (req, res) => {
 
 // History
 app.get("/api/searches", (req, res) => {
-  const db = require("better-sqlite3")("nexora_leads.db");
-  const searches = db.prepare("SELECT DISTINCT search_term, search_city, COUNT(*) as total, MAX(extracted_at) as last_search FROM leads GROUP BY search_term, search_city ORDER BY last_search DESC").all();
-  db.close();
-  res.json(searches);
+  const { __getMemoryDB } = require("./database");
+  const db = __getMemoryDB();
+
+  const map = new Map();
+  db.leads.forEach(l => {
+    const key = `${l.search_term}::${l.search_city}`;
+    if (!map.has(key)) {
+      map.set(key, { search_term: l.search_term, search_city: l.search_city, total: 0, last_search: l.extracted_at });
+    }
+    const val = map.get(key);
+    val.total++;
+    if (new Date(l.extracted_at) > new Date(val.last_search)) val.last_search = l.extracted_at;
+  });
+
+  res.json(Array.from(map.values()).sort((a, b) => new Date(b.last_search) - new Date(a.last_search)));
 });
 
 app.listen(PORT, () => {
   console.log(`
 ╔═══════════════════════════════════════════════════╗
-║   🎯 Nexora Google Maps Scraper v2.0              ║
+║   🎯 Rataria Google Maps Scraper v2.0              ║
 ║   http://localhost:${PORT}                          ║
 ║                                                   ║
 ║   POST /api/search       - Iniciar busca          ║

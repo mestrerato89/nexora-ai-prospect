@@ -364,6 +364,11 @@ export default function Leads() {
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
 
+  const [leadToPay, setLeadToPay] = useState<Lead | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState<string>("");
+  const [isRecurring, setIsRecurring] = useState<boolean>(false);
+  const [recurringAmount, setRecurringAmount] = useState<string>("");
+
   const fetchLeads = async () => {
     if (!user) {
       setLeads([]);
@@ -373,16 +378,8 @@ export default function Leads() {
 
     setLoading(true);
 
-    // If admin or head operacional, fetch all leads
-    // For now, let's keep it simple: if isAdmin or special email, fetch all
-    const fetchAll = isAdmin || user.email === "huguinhoask@gmail.com";
-
+    // Agora o CRM é compartilhado: todos os usuários veem todos os leads
     let query = supabase.from("leads").select("*");
-
-    if (!fetchAll) {
-      // Non-admins see their own leads OR unassigned leads
-      query = query.or(`user_id.eq.${user.id},user_id.is.null`);
-    }
 
     const { data, error } = await query.order("created_at", { ascending: false });
 
@@ -424,11 +421,86 @@ export default function Leads() {
   };
 
   const updateStatus = async (id: string, status: Status) => {
-    await supabase.from("leads").update({ status } as any).eq("id", id);
+    if (status === "pago") {
+      // Verifica se o lead já possui faturamento/assinatura
+      const { data: payRecords } = await supabase.from('payments').select('id').eq('lead_id', id).limit(1);
+      const { data: subRecords } = await supabase.from('subscriptions').select('id').eq('lead_id', id).limit(1);
+
+      const hasPaymentInfo = (payRecords && payRecords.length > 0) || (subRecords && subRecords.length > 0);
+
+      if (hasPaymentInfo) {
+        // Apenas muda o status localmente e no banco sem abrir o popup (evita duplicidade)
+        setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, status } as Lead : l)));
+        if (selectedLead?.id === id) {
+          setSelectedLead((prev) => (prev ? ({ ...prev, status } as Lead) : null));
+        }
+        await supabase.from("leads").update({ status } as any).eq("id", id);
+        toast.info("Status alterado para Pago. O faturamento desse lead já havia sido registrado!");
+        return;
+      }
+
+      const currentLead = leads.find(l => l.id === id);
+      setLeadToPay(currentLead || null);
+      setPaymentAmount("");
+      setIsRecurring(false);
+      setRecurringAmount("");
+      return;
+    }
+
     setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, status } as Lead : l)));
     if (selectedLead?.id === id) {
       setSelectedLead((prev) => (prev ? ({ ...prev, status } as Lead) : null));
     }
+
+    const { error } = await supabase.from("leads").update({ status } as any).eq("id", id);
+    if (error) {
+      toast.error("Erro ao atualizar status: " + error.message);
+      return;
+    }
+  };
+
+  const confirmPayment = async () => {
+    if (!leadToPay) return;
+    const amountNum = parseFloat(paymentAmount.replace(",", ".") || "0");
+    const recNum = parseFloat(recurringAmount.replace(",", ".") || "0");
+
+    if (amountNum <= 0 && (!isRecurring || recNum <= 0)) {
+      toast.error("Informe pelo menos um valor válido (Única ou Recorrência).");
+      return;
+    }
+
+    setLeads((prev) => prev.map((l) => (l.id === leadToPay.id ? { ...l, status: "pago" } as Lead : l)));
+    if (selectedLead?.id === leadToPay.id) {
+      setSelectedLead((prev) => (prev ? ({ ...prev, status: "pago" as Status } as Lead) : null));
+    }
+
+    await supabase.from("leads").update({ status: "pago" } as any).eq("id", leadToPay.id);
+
+    let successMsg = "";
+
+    if (amountNum > 0) {
+      const { error: payError } = await supabase.from('payments').insert({
+        lead_id: leadToPay.id,
+        amount: amountNum,
+        status: 'pendente',
+        user_id: leadToPay.user_id || user?.id || ""
+      });
+      if (payError) { toast.error("Erro ao registrar venda: " + payError.message); return; }
+      successMsg += "Venda registrada. ";
+    }
+
+    if (isRecurring && recNum > 0) {
+      const { error: subError } = await supabase.from('subscriptions').insert({
+        lead_id: leadToPay.id,
+        amount: recNum,
+        status: 'ativo'
+      });
+      if (subError) { toast.error("Erro ao ativar recorrência: " + subError.message); return; }
+      successMsg += "Recorrência ativada!";
+    }
+
+    if (successMsg) toast.success(successMsg);
+    setLeadToPay(null);
   };
 
   const archiveLead = async (id: string) => {
@@ -662,6 +734,67 @@ export default function Leads() {
         prospectorName={profiles.find(p => p.user_id === (selectedLead as any)?.user_id)?.display_name || profiles.find(p => p.user_id === (selectedLead as any)?.user_id)?.email}
         onClaim={claimLead}
       />
+
+      {/* Payment Popup */}
+      <Dialog open={!!leadToPay} onOpenChange={(open) => !open && setLeadToPay(null)}>
+        <DialogContent className="bg-card border-border max-w-sm rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black">Registrar Fechamento</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Valor Venda Única (Setup) R$</Label>
+              <Input
+                type="number"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                placeholder="Ex: 500,00 (Deixe 0 se não houver)"
+                className="h-12 rounded-2xl bg-background/50 border-primary/20 font-bold"
+              />
+            </div>
+
+            <div className="space-y-2 pt-2 border-t border-border/50">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Venda Recorrente?</Label>
+                  <p className="text-[10px] text-muted-foreground ml-1">Ative para criar uma assinatura/MRR</p>
+                </div>
+                <div
+                  className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${isRecurring ? 'bg-indigo-500' : 'bg-muted/40'}`}
+                  onClick={() => setIsRecurring(!isRecurring)}
+                >
+                  <div
+                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${isRecurring ? 'translate-x-6' : 'translate-x-0'}`}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <AnimatePresence>
+              {isRecurring && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="space-y-2 overflow-hidden"
+                >
+                  <Label className="text-[10px] uppercase font-black tracking-widest text-indigo-500 ml-1">Valor da Mensalidade (R$)</Label>
+                  <Input
+                    type="number"
+                    value={recurringAmount}
+                    onChange={(e) => setRecurringAmount(e.target.value)}
+                    placeholder="Ex: 250,00"
+                    className="h-12 rounded-2xl bg-indigo-500/5 border-indigo-500/20 font-bold text-indigo-500 focus-visible:ring-indigo-500"
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+            <Button onClick={confirmPayment} className="w-full h-12 rounded-2xl bg-emerald-500 hover:bg-emerald-600 font-bold shadow-lg shadow-emerald-500/20 text-white">
+              Confirmar Recebimento
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

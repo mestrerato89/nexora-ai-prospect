@@ -16,7 +16,7 @@ const materials = [
   { title: "Como Encontrar Clientes", desc: "Estratégias práticas para vender apps com IA", icon: Users, badge: "Estratégia" },
   { title: "Lovable — Transforme Ideias em Produtos", desc: "Tutorial completo da ferramenta Lovable", icon: Rocket, badge: "Tutorial" },
   { title: "Manual Prático de Vendas", desc: "Scripts de abordagem e respostas para objeções", icon: FileText, badge: "Manual" },
-  { title: "Como Usar a Nexora", desc: "Guia completo da plataforma Nexora Intelligence", icon: Lightbulb, badge: "Guia" },
+  { title: "Como Usar a Rataria", desc: "Guia completo da plataforma Rataria Intelligence", icon: Lightbulb, badge: "Guia" },
 ];
 
 export default function AreaEstudos() {
@@ -36,7 +36,7 @@ export default function AreaEstudos() {
 
         {/* Tutorial steps */}
         <div className="bg-card rounded-xl border border-border p-6">
-          <h2 className="text-lg font-bold text-foreground mb-1">Como Usar a Nexora</h2>
+          <h2 className="text-lg font-bold text-foreground mb-1">Como Usar a Rataria</h2>
           <p className="text-sm text-muted-foreground mb-6">Tutorial rápido em 6 passos</p>
 
           <div className="space-y-4">

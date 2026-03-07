@@ -29,7 +29,7 @@ serve(async (req) => {
           messages: [
             {
               role: "system",
-              content: `Você é o assistente de IA da Nexora, uma plataforma de prospecção inteligente. Você ajuda vendedores e empreendedores com:
+              content: `Você é o assistente de IA da Rataria, uma plataforma de prospecção inteligente. Você ajuda vendedores e empreendedores com:
 - Scripts de abordagem personalizados por nicho
 - Análise de perfil de leads para sugestões de contato
 - Dicas de vendas e prospecção

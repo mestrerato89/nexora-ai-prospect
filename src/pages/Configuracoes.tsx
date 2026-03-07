@@ -145,7 +145,7 @@ export default function Configuracoes() {
                   <Label className="text-xs uppercase tracking-widest text-muted-foreground font-bold">Nome da Empresa</Label>
                   <Input
                     value={profile.company_name || ""}
-                    placeholder="Ex: Nexora Solutions"
+                    placeholder="Ex: Rataria Solutions"
                     onChange={(e) => setProfile({ ...profile, company_name: e.target.value })}
                     className="bg-secondary/50 border-primary/10 focus:border-primary/30 h-11"
                   />
@@ -181,10 +181,10 @@ export default function Configuracoes() {
                   { label: "Novos Leads Prospectados", desc: "Alertar quando uma nova empresa for adicionada ao CRM" },
                   { label: "Follow-ups Pendentes", desc: "Lembretes diários de tarefas de acompanhamento" },
                   { label: "Propostas Visualizadas", desc: "Saber quando o cliente abrir seu link de proposta" },
-                  { label: "Nexora AI: Resumo Diário", desc: "Resumo gerado por IA sobre sua performance e novas oportunidades" },
+                  { label: "Rataria AI: Resumo Diário", desc: "Resumo gerado por IA sobre sua performance e novas oportunidades" },
                   { label: "WhatsApp: Alertas Diretos", desc: "Receber notificações de leads quentes direto no seu WhatsApp" },
                   { label: "Temperatura de Leads", desc: "Avisar quando um lead frio começar a interagir novamente" },
-                  { label: "Relatórios Semanais", desc: "Estatísticas de conversão e sugestões de estratégia da Nexora" },
+                  { label: "Relatórios Semanais", desc: "Estatísticas de conversão e sugestões de estratégia da Rataria" },
                   { label: "Atualizações Críticas", desc: "Novas funcionalidades e avisos de sistema" },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center justify-between py-4 border-b border-border last:border-0 group">
@@ -234,7 +234,7 @@ export default function Configuracoes() {
                   <p className="text-xs text-muted-foreground mt-1">Encerrar a sessão ou desativar o acesso de todos os dispositivos.</p>
                 </div>
                 <Button variant="outline" className="border-destructive/20 text-destructive hover:bg-destructive/10 hover:border-destructive/40 transition-all gap-2 h-11" onClick={signOut}>
-                  Sair do Nexora Intelligence
+                  Sair do Rataria Intelligence
                 </Button>
               </div>
             </div>

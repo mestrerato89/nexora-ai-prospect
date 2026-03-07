@@ -53,7 +53,7 @@ const ALL_FEATURES = [
   "Agendamento online", "Push notifications", "Analytics", "Integração WhatsApp",
 ];
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/nexora-chat`;
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/rataria-chat`;
 
 export default function NovoApp() {
   const { user } = useAuth();

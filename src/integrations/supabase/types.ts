@@ -61,6 +61,115 @@ export type Database = {
           },
         ]
       }
+      expenses: {
+        Row: {
+          id: string
+          type: "fixo" | "variavel"
+          name: string
+          description: string | null
+          amount: number
+          date: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          type: "fixo" | "variavel"
+          name: string
+          description?: string | null
+          amount?: number
+          date?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          type?: "fixo" | "variavel"
+          name?: string
+          description?: string | null
+          amount?: number
+          date?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      payments: {
+        Row: {
+          id: string
+          lead_id: string
+          amount: number
+          status: "pendente" | "aprovado"
+          include_head: boolean
+          include_bdr: boolean
+          user_id: string
+          created_at: string
+          approved_at: string | null
+        }
+        Insert: {
+          id?: string
+          lead_id: string
+          amount?: number
+          status?: "pendente" | "aprovado"
+          include_head?: boolean
+          include_bdr?: boolean
+          user_id: string
+          created_at?: string
+          approved_at?: string | null
+        }
+        Update: {
+          id?: string
+          lead_id?: string
+          amount?: number
+          status?: "pendente" | "aprovado"
+          include_head?: boolean
+          include_bdr?: boolean
+          user_id?: string
+          created_at?: string
+          approved_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          id: string
+          lead_id: string
+          amount: number
+          status: "ativo" | "cancelado"
+          start_date: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          lead_id: string
+          amount?: number
+          status?: "ativo" | "cancelado"
+          start_date?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          lead_id?: string
+          amount?: number
+          status?: "ativo" | "cancelado"
+          start_date?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           address: string | null

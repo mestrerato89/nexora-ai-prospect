@@ -133,7 +133,7 @@ export function AppSidebar() {
           </div>
           {!collapsed && (
             <div>
-              <span className="text-base font-bold tracking-tight text-foreground">Nexora</span>
+              <span className="text-base font-bold tracking-tight text-foreground">Rataria</span>
               <p className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">Intelligence</p>
             </div>
           )}
