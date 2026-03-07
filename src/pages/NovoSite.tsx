@@ -62,7 +62,7 @@ const ALL_SECTIONS = [
   "Selo de garantia", "Chat ao vivo", "Blog", "Pricing/Planos",
 ];
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/nexora-chat`;
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/rataria-chat`;
 
 export default function NovoSite() {
   const { user } = useAuth();

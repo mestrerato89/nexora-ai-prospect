@@ -10,7 +10,7 @@ import ReactMarkdown from "react-markdown";
 type Msg = { role: "user" | "assistant"; content: string };
 type Conversation = { id: string; title: string; messages: Msg[] };
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/nexora-chat`;
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/rataria-chat`;
 
 export default function Assistente() {
   const [conversations, setConversations] = useState<Conversation[]>([
