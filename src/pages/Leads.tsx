@@ -70,7 +70,7 @@ const LeadCard = ({
       className={`bg-card rounded-2xl border border-border/60 overflow-hidden card-hover group/card ${compact ? `border-l-4 ${sc?.kanbanColor || ""}` : ""
         }`}
     >
-      {/* Header row: drag handle + name + badges */}
+      {/* Header row: drag handle + name + badges + archive/delete */}
       <div className="flex items-start gap-2 p-3 pb-0">
         <div className="pt-1 cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors">
           <GripVertical className="h-4 w-4" />
@@ -89,14 +89,43 @@ const LeadCard = ({
               </span>
               {lead.score != null && (
                 <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${(lead.score || 0) >= 80 ? "bg-emerald-500/20 text-emerald-500" :
-                    (lead.score || 0) >= 50 ? "bg-amber-500/20 text-amber-500" :
-                      "bg-destructive/20 text-destructive"
+                  (lead.score || 0) >= 50 ? "bg-amber-500/20 text-amber-500" :
+                    "bg-destructive/20 text-destructive"
                   }`}>
                   {lead.score}pts
                 </span>
               )}
             </div>
           </div>
+        </div>
+        {/* Archive / Delete buttons */}
+        <div className="flex flex-col gap-1 shrink-0">
+          {showArchived ? (
+            <button
+              onClick={(e) => { e.stopPropagation(); restoreLead(lead.id); }}
+              className="h-7 w-7 rounded-lg flex items-center justify-center bg-primary/10 hover:bg-primary/20 transition-colors"
+              title="Restaurar Lead"
+            >
+              <RotateCcw className="h-3.5 w-3.5 text-primary" />
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); archiveLead(lead.id); }}
+                className="h-7 w-7 rounded-lg flex items-center justify-center bg-amber-500/10 hover:bg-amber-500/20 transition-colors"
+                title="Arquivar Lead"
+              >
+                <Archive className="h-3.5 w-3.5 text-amber-500" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); if (confirm("Excluir permanentemente este lead?")) permanentDeleteLead(lead.id); }}
+                className="h-7 w-7 rounded-lg flex items-center justify-center bg-destructive/10 hover:bg-destructive/20 transition-colors"
+                title="Excluir Permanentemente"
+              >
+                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -684,10 +713,10 @@ export default function Leads() {
                 <div className="space-y-3">
                   <div><Label>Nome *</Label><Input value={newLead.name} onChange={(e) => setNewLead({ ...newLead, name: e.target.value })} className="bg-secondary border-border" placeholder="Nome do Lead" /></div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div><Label>Nicho</Label><Input value={newLead.niche} onChange={(e) => setNewLead({ ...newLead, niche: e.target.value })} className="bg-secondary border-border" placeholder="Ex: Barbearia" /></div>
-                    <div><Label>Website</Label><Input value={newLead.website} onChange={(e) => setNewLead({ ...newLead, website: e.target.value })} className="bg-secondary border-border" placeholder="Ex: www.site.com" /></div>
+                    <div><Label>Nicho (Opcional)</Label><Input value={newLead.niche} onChange={(e) => setNewLead({ ...newLead, niche: e.target.value })} className="bg-secondary border-border" placeholder="Ex: Barbearia" /></div>
+                    <div><Label>Website (Opcional)</Label><Input value={newLead.website} onChange={(e) => setNewLead({ ...newLead, website: e.target.value })} className="bg-secondary border-border" placeholder="Ex: www.site.com" /></div>
                   </div>
-                  <div><Label>Endereço</Label><Input value={newLead.address} onChange={(e) => setNewLead({ ...newLead, address: e.target.value })} className="bg-secondary border-border" placeholder="Rua, Número, Bairro, Cidade" /></div>
+                  <div><Label>Endereço (Opcional)</Label><Input value={newLead.address} onChange={(e) => setNewLead({ ...newLead, address: e.target.value })} className="bg-secondary border-border" placeholder="Rua, Número, Bairro, Cidade" /></div>
                   <div className="grid grid-cols-2 gap-3">
                     <div><Label>Email (Opcional)</Label><Input value={newLead.email} onChange={(e) => setNewLead({ ...newLead, email: e.target.value })} className="bg-secondary border-border" placeholder="email@exemplo.com" /></div>
                     <div><Label>Telefone (Opcional)</Label><Input value={newLead.phone} onChange={(e) => setNewLead({ ...newLead, phone: e.target.value })} className="bg-secondary border-border" placeholder="+55 21 99999-9999" /></div>
