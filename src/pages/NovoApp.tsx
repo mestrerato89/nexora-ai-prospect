@@ -102,7 +102,8 @@ export default function NovoApp() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          "Authorization": `Bearer ${token}`,
+          "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
         body: JSON.stringify({
           messages: [{
@@ -128,7 +129,10 @@ Formato: Markdown bem estruturado, pronto para ser usado como especificação t�
         }),
       });
 
-      if (!resp.ok) throw new Error("Erro na API");
+      if (!resp.ok) {
+        const errText = await resp.text();
+        throw new Error(`${resp.status} - ${errText}`);
+      }
 
       const reader = resp.body?.getReader();
       if (!reader) throw new Error("No reader");
@@ -161,10 +165,10 @@ Formato: Markdown bem estruturado, pronto para ser usado como especificação t�
       }
 
       setGenStep("Concluído!");
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
       toast.error("Erro ao gerar prompt");
-      setGenStep("Erro na geração");
+      setGenStep(String(e?.message || e));
     }
     setGenerating(false);
   };
@@ -425,7 +429,8 @@ Formato: Markdown bem estruturado, pronto para ser usado como especificação t�
 
               {!generating && !generatedPrompt && (
                 <div className="bg-card rounded-xl border border-destructive/20 p-12 text-center space-y-4">
-                  <p className="text-lg font-semibold text-destructive">Ocorreu um erro ao gerar o prompt.</p>
+                  <p className="text-lg font-semibold text-destructive">Ocorreu um erro ao gerar o prompt:</p>
+                  <p className="text-sm font-mono text-muted-foreground break-words bg-black/20 p-4 rounded-xl">{genStep}</p>
                   <div className="flex gap-3 justify-center">
                     <Button variant="outline" onClick={() => setStep(1)} className="gap-2 border-border"><ArrowLeft className="h-4 w-4" /> Voltar</Button>
                     <Button onClick={() => { setGeneratedPrompt(""); handleGenerate(); }} className="gap-2"><Sparkles className="h-4 w-4" /> Tentar Novamente</Button>

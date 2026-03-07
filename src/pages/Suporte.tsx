@@ -35,14 +35,19 @@ export default function Suporte() {
 
       const resp = await fetch(CHAT_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+          "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
         body: JSON.stringify({ messages: newMessages }),
       });
 
       if (!resp.ok) {
         if (resp.status === 429) { toast.error("Muitas requisições."); setIsLoading(false); return; }
         if (resp.status === 402) { toast.error("Créditos esgotados."); setIsLoading(false); return; }
-        throw new Error("Erro");
+        const rTx = await resp.text();
+        throw new Error(`${resp.status} - ${rTx}`);
       }
 
       const reader = resp.body?.getReader();
@@ -74,7 +79,9 @@ export default function Suporte() {
           } catch { buf = line + "\n" + buf; break; }
         }
       }
-    } catch { toast.error("Erro ao comunicar com o suporte"); }
+    } catch (e: any) {
+      toast.error(`Erro: ${e.message || "Falha ao conectar com suporte"}`);
+    }
     setIsLoading(false);
   };
 
