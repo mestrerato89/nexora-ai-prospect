@@ -97,6 +97,7 @@ const Finance = () => {
     // Form States
     const [newPayment, setNewPayment] = useState({ leadId: "", amount: 0 });
     const [newExpense, setNewExpense] = useState({ type: 'fixo' as 'fixo' | 'variavel', name: "", description: "", amount: 0 });
+    const [newSubscription, setNewSubscription] = useState({ leadId: "", amount: 0 });
 
     const fetchData = async () => {
         try {
@@ -241,6 +242,29 @@ const Finance = () => {
 
         setNewPayment({ leadId: "", amount: 0 });
         toast.success("Recebimento registrado e aguardando aprovação!");
+        fetchData();
+    };
+
+    const handleAddSubscription = async () => {
+        if (!newSubscription.leadId || newSubscription.amount <= 0) {
+            toast.error("Selecione um lead e um valor mensal válido");
+            return;
+        }
+
+        const { error } = await supabase.from('subscriptions').insert({
+            lead_id: newSubscription.leadId,
+            amount: newSubscription.amount,
+            status: 'ativo',
+            start_date: new Date().toISOString().split('T')[0]
+        });
+
+        if (error) {
+            toast.error("Erro ao registrar recorrência: " + error.message);
+            return;
+        }
+
+        setNewSubscription({ leadId: "", amount: 0 });
+        toast.success("Recorrência ativada com sucesso!");
         fetchData();
     };
 
@@ -705,8 +729,47 @@ const Finance = () => {
                     </TabsContent>
 
                     <TabsContent value="subscriptions" className="space-y-6 outline-none">
-                        <motion.div initial="hidden" animate="visible" variants={itemVariants} className="grid grid-cols-1 gap-6">
-                            <Card className="rounded-[2.5rem] border-indigo-500/10 bg-indigo-500/5 overflow-hidden">
+                        <motion.div initial="hidden" animate="visible" variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <Card className="lg:col-span-1 rounded-[2.5rem] border-indigo-500/10 bg-card/50 overflow-hidden">
+                                <CardHeader className="bg-indigo-500/5 p-6 border-b border-indigo-500/10">
+                                    <CardTitle className="text-lg font-black tracking-tight text-indigo-500 uppercase flex items-center gap-2">
+                                        <Plus className="h-5 w-5" /> Nova Recorrência
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-6 space-y-5">
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Cliente / Projeto</Label>
+                                        <Select value={newSubscription.leadId} onValueChange={(v) => setNewSubscription(prev => ({ ...prev, leadId: v }))}>
+                                            <SelectTrigger className="h-12 rounded-2xl bg-background/50 border-indigo-500/20 focus:ring-indigo-500/50">
+                                                <SelectValue placeholder="Selecione o Cliente" />
+                                            </SelectTrigger>
+                                            <SelectContent className="rounded-2xl max-h-[200px] overflow-y-auto">
+                                                {leads.map(l => (
+                                                    <SelectItem key={l.id} value={l.id} className="rounded-xl">{l.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Valor Mensal / MRR (R$)</Label>
+                                        <div className="relative">
+                                            <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-500/50" />
+                                            <Input
+                                                type="number"
+                                                className="h-12 pl-12 rounded-2xl bg-background/50 border-indigo-500/20 font-bold focus:border-indigo-500/50"
+                                                placeholder="0,00"
+                                                value={newSubscription.amount || ""}
+                                                onChange={(e) => setNewSubscription(prev => ({ ...prev, amount: Number(e.target.value) }))}
+                                            />
+                                        </div>
+                                    </div>
+                                    <Button onClick={handleAddSubscription} className="w-full h-14 rounded-2xl bg-indigo-500 hover:bg-indigo-600 text-white font-black shadow-lg shadow-indigo-500/20 transition-all active:scale-95 gap-2">
+                                        <Plus className="h-5 w-5" /> Iniciar Recorrência
+                                    </Button>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="lg:col-span-2 rounded-[2.5rem] border-indigo-500/10 bg-indigo-500/5 overflow-hidden">
                                 <CardHeader className="bg-indigo-500/5 p-6 border-b border-indigo-500/10">
                                     <CardTitle className="text-lg font-black tracking-tight text-indigo-500 uppercase flex items-center justify-between">
                                         Carteira de Recorrências Mensais (MRR)
