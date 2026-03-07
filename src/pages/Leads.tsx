@@ -406,11 +406,14 @@ export default function Leads() {
   const addLead = async () => {
     if (!user || !newLead.name.trim()) { toast.error("Nome é obrigatório"); return; }
     const { error } = await supabase.from("leads").insert({
-      user_id: user.id, name: newLead.name.trim(),
-      email: newLead.email || null, phone: newLead.phone || null,
-      niche: newLead.niche || null, city: newLead.city || null, state: newLead.state || null,
+      user_id: user.id,
+      name: newLead.name.trim(),
+      email: newLead.email || null,
+      phone: newLead.phone || null,
+      niche: newLead.niche || null,
       website: newLead.website || null,
-      has_phone: !!newLead.phone, has_website: !!newLead.website,
+      has_phone: !!newLead.phone,
+      has_website: !!newLead.website,
     });
     if (error) { toast.error(error.message); return; }
     toast.success("Lead adicionado!");
