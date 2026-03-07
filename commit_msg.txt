@@ -1,1 +1,1 @@
-feat: ranking full values, prospection tabs, simplified CRM statuses
+feat: implement all prospection modules UI based on reference
