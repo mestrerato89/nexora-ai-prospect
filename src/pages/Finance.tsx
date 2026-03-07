@@ -312,13 +312,11 @@ const Finance = () => {
             <div className="space-y-6 max-w-7xl mx-auto">
                 <motion.div initial="hidden" animate="visible" variants={itemVariants} className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
                     <div>
-                        <h2 className="text-3xl font-black tracking-tight text-foreground flex items-center gap-3">
-                            <div className="p-2 bg-primary/10 rounded-2xl">
-                                <DollarSign className="h-8 w-8 text-primary" />
-                            </div>
+                        <h2 className="text-xl font-mono font-bold tracking-tight text-foreground flex items-center gap-3">
+                            <DollarSign className="h-5 w-5 text-primary" />
                             Gestão Financeira
                         </h2>
-                        <p className="text-muted-foreground mt-1 text-sm font-medium">Controle de faturamento, gastos e distribuição de lucros em tempo real.</p>
+                        <p className="text-muted-foreground mt-1 text-[10px] font-mono uppercase tracking-[0.15em]">Controle de faturamento e distribuição de lucros</p>
                     </div>
 
                     <div className="flex bg-muted/30 p-1 rounded-2xl border border-primary/5">
@@ -331,12 +329,12 @@ const Finance = () => {
                             />
                         </div>
                         <div className="px-4 py-2 text-center border-r border-primary/5">
-                            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Saldo Líquido</p>
-                            <p className="text-lg font-black text-emerald-500">R$ {netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                            <p className="text-[9px] font-mono font-bold uppercase text-muted-foreground tracking-[0.2em]">Saldo Líquido</p>
+                            <p className="text-lg font-mono font-black text-primary">R$ {netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                         </div>
                         <div className="px-4 py-2 text-center">
-                            <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Meta Mensal</p>
-                            <p className="text-lg font-black text-foreground">85%</p>
+                            <p className="text-[9px] font-mono font-bold uppercase text-muted-foreground tracking-[0.2em]">Meta Mensal</p>
+                            <p className="text-lg font-mono font-black text-foreground">85%</p>
                         </div>
                     </div>
                 </motion.div>

@@ -128,24 +128,31 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary">
-            <Globe className="h-4 w-4 text-primary-foreground" />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="text-primary">
+              <circle cx="14" cy="14" r="8" stroke="currentColor" strokeWidth="1.5" fill="none" />
+              <circle cx="14" cy="14" r="2" fill="currentColor" />
+              <line x1="14" y1="2" x2="14" y2="5" stroke="currentColor" strokeWidth="1.5" />
+              <line x1="14" y1="23" x2="14" y2="26" stroke="currentColor" strokeWidth="1.5" />
+              <line x1="2" y1="14" x2="5" y2="14" stroke="currentColor" strokeWidth="1.5" />
+              <line x1="23" y1="14" x2="26" y2="14" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
           </div>
           {!collapsed && (
             <div>
-              <span className="text-base font-bold tracking-tight text-foreground">Rataria</span>
-              <p className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">Intelligence</p>
+              <span className="text-base font-mono font-bold tracking-tight text-foreground">Rataria</span>
+              <p className="text-[9px] font-mono tracking-[0.35em] text-muted-foreground uppercase">Intelligence</p>
             </div>
           )}
         </div>
 
         {!collapsed && (
           <div className="mt-4 space-y-2">
-            <Button size="sm" className="w-full justify-center text-xs font-semibold" onClick={() => navigate("/novo-app")}>
-              <Smartphone className="h-3.5 w-3.5 mr-1.5" /> Novo Aplicativo
+            <Button size="sm" className="w-full justify-center text-[10px] font-mono font-bold uppercase tracking-widest rounded-button" onClick={() => navigate("/novo-app")}>
+              <Smartphone className="h-3.5 w-3.5 mr-1.5" /> Novo App
             </Button>
-            <Button variant="outline" size="sm" className="w-full justify-center text-xs font-medium border-border" onClick={() => navigate("/novo-site")}>
-              <Globe className="h-3.5 w-3.5 mr-1.5" /> Novo Site / LP
+            <Button variant="outline" size="sm" className="w-full justify-center text-[10px] font-mono font-medium border-border rounded-button uppercase tracking-widest" onClick={() => navigate("/novo-site")}>
+              <Globe className="h-3.5 w-3.5 mr-1.5" /> Novo Site
             </Button>
           </div>
         )}
@@ -153,12 +160,12 @@ export function AppSidebar() {
 
       <SidebarContent className="px-2">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-3 mb-1">Principal</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-muted-foreground px-3 mb-1">Principal</SidebarGroupLabel>
           <SidebarGroupContent><SidebarMenu>{renderMenuItems(principalItems)}</SidebarMenu></SidebarGroupContent>
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-3 mb-1">Growth</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-muted-foreground px-3 mb-1">Growth</SidebarGroupLabel>
           <SidebarGroupContent><SidebarMenu>{renderMenuItems(growthItems)}</SidebarMenu></SidebarGroupContent>
         </SidebarGroup>
 

@@ -127,9 +127,9 @@ const Index = () => {
         animate="visible"
       >
         <motion.div variants={itemVariants}>
-          <h1 className="text-2xl font-bold text-foreground">{getGreeting()}</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Bem-vindo ao Rataria! Seu dashboard local está pronto. 🚀
+          <h1 className="text-xl font-mono font-bold text-foreground">{getGreeting()}</h1>
+          <p className="text-muted-foreground text-[11px] font-mono uppercase tracking-[0.15em] mt-1">
+            Painel de operações ativo — Rataria Intelligence
           </p>
         </motion.div>
 

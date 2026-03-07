@@ -4,31 +4,50 @@ import type { DashboardData } from "@/pages/Index";
 
 interface StatCardProps {
   icon: LucideIcon;
-  iconColor: string;
   label: string;
   value: string;
 }
 
-function StatCard({ icon: Icon, iconColor, label, value }: StatCardProps) {
+/** SVG targeting brackets for stat cards — 4 corner L-shapes */
+function TargetingBrackets() {
   return (
-    <div className="bg-card rounded-xl p-4 card-hover border border-border">
-      <div className={`h-8 w-8 rounded-lg flex items-center justify-center mb-3 ${iconColor}`}>
-        <Icon className="h-4 w-4" />
-      </div>
-      <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
-      <p className="text-xl font-bold text-foreground">{value}</p>
+    <svg className="absolute inset-0 w-full h-full pointer-events-none" preserveAspectRatio="none">
+      {/* Top-left */}
+      <line x1="4" y1="8" x2="4" y2="4" stroke="currentColor" strokeWidth="1" className="text-primary/20" />
+      <line x1="4" y1="4" x2="12" y2="4" stroke="currentColor" strokeWidth="1" className="text-primary/20" />
+      {/* Top-right */}
+      <line x1="100%" y1="4" x2="100%" y2="4" stroke="currentColor" strokeWidth="1" className="text-primary/20" />
+      <line x1="calc(100% - 4px)" y1="8" x2="calc(100% - 4px)" y2="4" stroke="currentColor" strokeWidth="1" className="text-primary/20" />
+      <line x1="calc(100% - 4px)" y1="4" x2="calc(100% - 12px)" y2="4" stroke="currentColor" strokeWidth="1" className="text-primary/20" />
+      {/* Bottom-left */}
+      <line x1="4" y1="calc(100% - 8px)" x2="4" y2="calc(100% - 4px)" stroke="currentColor" strokeWidth="1" className="text-primary/20" />
+      <line x1="4" y1="calc(100% - 4px)" x2="12" y2="calc(100% - 4px)" stroke="currentColor" strokeWidth="1" className="text-primary/20" />
+      {/* Bottom-right */}
+      <line x1="calc(100% - 4px)" y1="calc(100% - 8px)" x2="calc(100% - 4px)" y2="calc(100% - 4px)" stroke="currentColor" strokeWidth="1" className="text-primary/20" />
+      <line x1="calc(100% - 4px)" y1="calc(100% - 4px)" x2="calc(100% - 12px)" y2="calc(100% - 4px)" stroke="currentColor" strokeWidth="1" className="text-primary/20" />
+    </svg>
+  );
+}
+
+function StatCard({ icon: Icon, label, value }: StatCardProps) {
+  return (
+    <div className="relative bg-card rounded-card p-5 card-hover border border-primary/5 overflow-hidden group hover:border-primary/15 transition-all">
+      <TargetingBrackets />
+      <Icon className="h-4 w-4 text-muted-foreground mb-3 group-hover:text-primary transition-colors" />
+      <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground mb-1">{label}</p>
+      <p className="text-2xl font-mono font-black text-foreground">{value}</p>
     </div>
   );
 }
 
 export function StatsRow({ data }: { data: DashboardData }) {
   const stats: StatCardProps[] = [
-    { icon: Users, iconColor: "bg-primary/20 text-primary", label: "Total de Leads", value: String(data.totalLeads) },
-    { icon: Flame, iconColor: "bg-[hsl(var(--stat-icon-orange))]/20 text-[hsl(var(--stat-icon-orange))]", label: "Leads Quentes", value: String(data.leadsQuentes) },
-    { icon: Clock, iconColor: "bg-info/20 text-info", label: "Contatados", value: String(data.contatados) },
-    { icon: UserCheck, iconColor: "bg-primary/20 text-primary", label: "Pagos", value: String(data.pagos) },
-    { icon: TrendingUp, iconColor: "bg-[hsl(var(--stat-icon-purple))]/20 text-[hsl(var(--stat-icon-purple))]", label: "Pipeline", value: `R$0k` },
-    { icon: Star, iconColor: "bg-[hsl(var(--stat-icon-yellow))]/20 text-[hsl(var(--stat-icon-yellow))]", label: "Prev. Receita", value: `R$0k` },
+    { icon: Users, label: "Total Leads", value: String(data.totalLeads) },
+    { icon: Flame, label: "Leads Quentes", value: String(data.leadsQuentes) },
+    { icon: Clock, label: "Contatados", value: String(data.contatados) },
+    { icon: UserCheck, label: "Pagos", value: String(data.pagos) },
+    { icon: TrendingUp, label: "Pipeline", value: `R$0k` },
+    { icon: Star, label: "Prev. Receita", value: `R$0k` },
   ];
 
   return (

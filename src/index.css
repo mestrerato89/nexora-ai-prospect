@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,7 +7,7 @@
 
 @layer base {
   :root {
-    /* Dark theme as default */
+    /* Dark theme as default — Rataria Identity */
     --background: 222 47% 11%;
     --foreground: 210 40% 98%;
 
@@ -16,7 +17,8 @@
     --popover: 217 33% 17%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 160 84% 39%;
+    /* Brand Color: Orange Tático */
+    --primary: 25 95% 53%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 215 28% 17%;
@@ -32,38 +34,30 @@
     --destructive-foreground: 210 40% 98%;
 
     --border: 215 28% 22%;
-    --input: 215 28% 22%;
-    --ring: 160 84% 39%;
+    --input: 222 47% 8%;
+    --ring: 25 95% 53%;
 
     --radius: 0.75rem;
 
+    /* Sunken surfaces */
+    --sunken: 222 47% 8%;
+
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 215 20% 65%;
-    --sidebar-primary: 160 84% 39%;
+    --sidebar-primary: 25 95% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 215 28% 17%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 215 28% 22%;
-    --sidebar-ring: 160 84% 39%;
+    --sidebar-ring: 25 95% 53%;
 
-    /* Semantic tokens */
+    /* Status — only for functional feedback */
     --success: 160 84% 39%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
-
-    /* Custom dashboard tokens */
-    --stat-icon-green: 160 84% 39%;
-    --stat-icon-orange: 25 95% 53%;
-    --stat-icon-blue: 199 89% 48%;
-    --stat-icon-purple: 270 70% 60%;
-    --stat-icon-yellow: 45 93% 47%;
-    --stat-icon-pink: 330 80% 60%;
-
-    --badge-new: 199 89% 48%;
-    --badge-plus: 160 84% 39%;
   }
 
   /* Light theme */
@@ -77,7 +71,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 160 84% 39%;
+    --primary: 25 95% 53%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 210 40% 96%;
@@ -93,17 +87,19 @@
     --destructive-foreground: 0 0% 100%;
 
     --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 160 84% 39%;
+    --input: 210 40% 93%;
+    --ring: 25 95% 53%;
+
+    --sunken: 210 40% 93%;
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 215 16% 47%;
-    --sidebar-primary: 160 84% 39%;
+    --sidebar-primary: 25 95% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 210 40% 96%;
     --sidebar-accent-foreground: 222 47% 11%;
     --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 160 84% 39%;
+    --sidebar-ring: 25 95% 53%;
 
     --success: 160 84% 39%;
     --success-foreground: 0 0% 100%;
@@ -111,16 +107,6 @@
     --warning-foreground: 0 0% 100%;
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
-
-    --stat-icon-green: 160 84% 39%;
-    --stat-icon-orange: 25 95% 53%;
-    --stat-icon-blue: 199 89% 48%;
-    --stat-icon-purple: 270 70% 60%;
-    --stat-icon-yellow: 45 93% 47%;
-    --stat-icon-pink: 330 80% 60%;
-
-    --badge-new: 199 89% 48%;
-    --badge-plus: 160 84% 39%;
   }
 }
 
@@ -131,6 +117,18 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', sans-serif;
+    /* Tactical grid background texture */
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .light body,
+  body.light {
+    background-image:
+      linear-gradient(rgba(0,0,0,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,0,0,0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
   }
 }
 
@@ -140,6 +138,5 @@
   }
   .card-hover:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.3);
   }
 }

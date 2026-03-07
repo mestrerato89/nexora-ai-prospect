@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Users, Trophy, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 
@@ -12,6 +10,18 @@ interface BdrPerformance {
     salesCount: number;
 }
 
+/** SVG crown for 1st place — 3 triangles */
+function CrownIcon() {
+    return (
+        <svg width="14" height="10" viewBox="0 0 14 10" className="text-primary">
+            <polygon points="0,8 2,2 4,6" fill="currentColor" />
+            <polygon points="4,6 7,0 10,6" fill="currentColor" />
+            <polygon points="10,6 12,2 14,8" fill="currentColor" />
+            <rect x="0" y="8" width="14" height="2" rx="1" fill="currentColor" />
+        </svg>
+    );
+}
+
 export function BdrRanking() {
     const [bdrSummaries, setBdrSummaries] = useState<BdrPerformance[]>([]);
     const [loading, setLoading] = useState(true);
@@ -19,7 +29,6 @@ export function BdrRanking() {
     useEffect(() => {
         const fetchRanking = async () => {
             try {
-                // Fetch profiles and explicitly approved payments for the current month
                 const [profilesRes, paymentsRes] = await Promise.all([
                     supabase.from('profiles').select('*'),
                     supabase.from('payments').select('*').eq('status', 'aprovado')
@@ -31,7 +40,6 @@ export function BdrRanking() {
                 const users = profilesRes.data || [];
                 const payments = paymentsRes.data || [];
 
-                // Filter payments to only include the current month
                 const currentMonth = new Date().toISOString().substring(0, 7);
                 const currentMonthPayments = payments.filter(p => {
                     const pDate = new Date(p.created_at);
@@ -41,73 +49,96 @@ export function BdrRanking() {
                 const summaries = users.map(u => {
                     const bdrSales = currentMonthPayments.filter(p => p.user_id === u.user_id);
                     const totalSalesVolume = bdrSales.reduce((sum, p) => sum + p.amount, 0);
-
                     return {
                         id: u.user_id,
-                        name: u.display_name || u.email || "Usuário Desconhecido",
+                        name: u.display_name || u.email || "Desconhecido",
                         totalSalesVolume,
                         salesCount: bdrSales.length
                     };
-                }).filter(summary => summary.totalSalesVolume > 0)
-                    .sort((a, b) => b.totalSalesVolume - a.totalSalesVolume); // Sort desc
+                }).filter(s => s.totalSalesVolume > 0)
+                    .sort((a, b) => b.totalSalesVolume - a.totalSalesVolume);
 
                 setBdrSummaries(summaries);
             } catch (error) {
-                console.error("Erro ao buscar ranking de BDRs:", error);
+                console.error("Erro ranking BDR:", error);
             } finally {
                 setLoading(false);
             }
         };
-
         fetchRanking();
     }, []);
 
-    const itemVariants = {
-        hidden: { opacity: 0, scale: 0.95 },
-        visible: { opacity: 1, scale: 1, transition: { duration: 0.3 } },
-    };
+    const maxVolume = bdrSummaries.length > 0 ? bdrSummaries[0].totalSalesVolume : 1;
 
     return (
-        <Card className="rounded-[2rem] border-primary/10 bg-card/40 backdrop-blur-sm overflow-hidden h-full flex flex-col shadow-xl">
-            <CardHeader className="bg-primary/5 p-6 border-b border-primary/10">
-                <CardTitle className="text-sm font-black uppercase tracking-widest flex items-center justify-between">
-                    Ranking de Vendas (Mês Atual)
-                    <Trophy className="h-5 w-5 text-amber-500" />
+        <Card className="rounded-card border-primary/5 bg-card overflow-hidden h-full flex flex-col">
+            <CardHeader className="p-5 border-b border-primary/5">
+                <CardTitle className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-muted-foreground flex items-center justify-between">
+                    Ranking Vendas
+                    <span className="text-[9px] font-mono text-primary/50">MÊS ATUAL</span>
                 </CardTitle>
             </CardHeader>
-            <CardContent className="p-6 flex-1 flex flex-col min-h-[300px]">
+            <CardContent className="p-5 flex-1 flex flex-col min-h-[280px]">
                 {loading ? (
-                    <div className="flex-1 flex items-center justify-center animate-pulse">
-                        <Users className="h-8 w-8 text-primary/20" />
+                    <div className="flex-1 flex items-center justify-center">
+                        <div className="h-6 w-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
                     </div>
                 ) : bdrSummaries.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center opacity-40 italic text-center gap-3">
-                        <TrendingUp className="h-8 w-8 text-muted-foreground" />
-                        <span className="text-sm font-medium">Nenhum faturamento registrado neste mês ainda.</span>
+                    /* Empty state — radar */
+                    <div className="flex-1 flex flex-col items-center justify-center gap-4">
+                        <div className="relative w-[100px] h-[100px]">
+                            <svg width="100" height="100" viewBox="0 0 100 100" className="text-primary">
+                                <circle cx="50" cy="50" r="15" stroke="currentColor" strokeWidth="0.5" fill="none" opacity="0.08" />
+                                <circle cx="50" cy="50" r="30" stroke="currentColor" strokeWidth="0.5" fill="none" opacity="0.06" />
+                                <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="0.5" fill="none" opacity="0.04" />
+                                <line x1="50" y1="5" x2="50" y2="95" stroke="currentColor" strokeWidth="0.5" opacity="0.05" />
+                                <line x1="5" y1="50" x2="95" y2="50" stroke="currentColor" strokeWidth="0.5" opacity="0.05" />
+                            </svg>
+                            <div className="absolute inset-0 animate-radar-sweep origin-center">
+                                <svg width="100" height="100" viewBox="0 0 100 100">
+                                    <line x1="50" y1="50" x2="50" y2="8" stroke="hsl(var(--primary))" strokeWidth="1" opacity="0.3" />
+                                </svg>
+                            </div>
+                        </div>
+                        <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-muted-foreground">Nenhum sinal detectado</span>
                     </div>
                 ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-3 flex-1">
                         {bdrSummaries.map((bdr, idx) => (
                             <motion.div
-                                variants={itemVariants}
-                                initial="hidden"
-                                animate="visible"
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: idx * 0.1 }}
                                 key={bdr.id}
-                                className={`flex items-center justify-between p-4 rounded-2xl border transition-all hover:-translate-y-1 hover:shadow-lg ${idx === 0 ? 'bg-amber-500/10 border-amber-500/20 shadow-amber-500/5 ring-1 ring-amber-500/20' : idx === 1 ? 'bg-slate-300/10 border-slate-300/20' : idx === 2 ? 'bg-orange-800/10 border-orange-800/20' : 'bg-background/40 border-border/50'}`}
+                                className="flex items-center gap-3"
                             >
-                                <div className="flex items-center gap-4">
-                                    <div className={`h-8 w-8 rounded-full flex items-center justify-center font-black text-sm ${idx === 0 ? 'bg-amber-500 text-white shadow-md' : idx === 1 ? 'bg-slate-300 text-slate-800' : idx === 2 ? 'bg-orange-800 text-white' : 'bg-muted text-muted-foreground'}`}>
-                                        {idx + 1}º
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <p className={`font-bold text-sm ${idx === 0 ? 'text-amber-500' : 'text-foreground'}`}>{bdr.name}</p>
-                                        <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">{bdr.salesCount} Vendas Concluídas</p>
-                                    </div>
+                                {/* Position */}
+                                <div className="flex items-center gap-1 w-8 shrink-0">
+                                    {idx === 0 && <CrownIcon />}
+                                    <span className={`font-mono font-black text-sm ${idx === 0 ? 'text-primary' : 'text-muted-foreground'}`}>
+                                        {String(idx + 1).padStart(2, '0')}
+                                    </span>
                                 </div>
-                                <div className="text-right">
-                                    <Badge className={`${idx === 0 ? 'bg-amber-500 text-white hover:bg-amber-600 border-0' : 'bg-primary/10 text-primary border-primary/20'} font-black text-xs px-3 py-1 shadow-sm`}>
-                                        R$ {bdr.totalSalesVolume.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
-                                    </Badge>
+
+                                {/* Name + sales count */}
+                                <div className="flex-1 min-w-0">
+                                    <p className={`text-xs font-semibold truncate ${idx === 0 ? 'text-foreground' : 'text-muted-foreground'}`}>{bdr.name}</p>
+                                    <p className="text-[9px] font-mono text-muted-foreground uppercase tracking-widest">{bdr.salesCount} vendas</p>
+                                </div>
+
+                                {/* Ammo bar + value */}
+                                <div className="flex items-center gap-2 w-[140px] shrink-0">
+                                    <div className="flex-1 h-2 bg-accent rounded-full overflow-hidden">
+                                        <motion.div
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${(bdr.totalSalesVolume / maxVolume) * 100}%` }}
+                                            transition={{ duration: 0.8, delay: idx * 0.15 }}
+                                            className={`h-full rounded-full ${idx === 0 ? 'bg-primary' : 'bg-primary/50'}`}
+                                        />
+                                    </div>
+                                    <span className="font-mono text-[10px] font-bold text-foreground w-[60px] text-right">
+                                        R${(bdr.totalSalesVolume / 1000).toFixed(1)}k
+                                    </span>
                                 </div>
                             </motion.div>
                         ))}
