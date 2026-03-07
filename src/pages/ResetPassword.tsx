@@ -13,23 +13,38 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Handle the recovery token from the URL hash
-    const hash = window.location.hash;
-    const params = new URLSearchParams(hash.replace("#", "?"));
-    const type = params.get("type");
-    const accessToken = params.get("access_token");
-    const refreshToken = params.get("refresh_token");
+    const checkSession = async () => {
+      // 1. First, check if there's already an active session
+      const { data: { session } } = await supabase.auth.getSession();
 
-    if (type === "recovery" && accessToken) {
-      // Set the session from the recovery tokens
-      supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken || "",
-      });
-    } else if (!hash.includes("type=recovery")) {
-      // If no recovery token, redirect to login
+      if (session) {
+        // We have a session! The PKCE flow probably already handled the recovery link
+        return;
+      }
+
+      // 2. Fallback: Check if there's a recovery token in the URL hash
+      const hash = window.location.hash;
+      if (hash && hash.includes("access_token")) {
+        const params = new URLSearchParams(hash.replace("#", "?"));
+        const accessToken = params.get("access_token");
+        const refreshToken = params.get("refresh_token");
+
+        if (accessToken) {
+          // Set the session from the recovery tokens
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || "",
+          });
+
+          if (!error) return; // Session set successfully
+        }
+      }
+
+      // 3. If no session and no valid token, redirect to login
       navigate("/login");
-    }
+    };
+
+    checkSession();
   }, [navigate]);
 
   const handleUpdate = async (e: React.FormEvent) => {
