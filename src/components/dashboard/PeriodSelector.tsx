@@ -109,27 +109,29 @@ export function PeriodSelector({
                         <div className="relative group text-center min-w-[140px] flex items-center justify-center gap-2">
                             {viewMode === 'range' ? (
                                 <>
-                                    <div className="relative">
-                                        <span className="block text-[11px] font-black uppercase tracking-tight text-foreground transition-all hover:text-primary cursor-pointer whitespace-nowrap">
-                                            {new Date(customRange.from).toLocaleDateString('pt-BR')}
+                                    <div className="relative group/date">
+                                        <span className="block text-[11px] font-black uppercase tracking-tight text-foreground transition-all group-hover/date:text-primary cursor-pointer whitespace-nowrap px-1">
+                                            {customRange.from.split('-').reverse().join('/')}
                                         </span>
                                         <input
                                             type="date"
                                             value={customRange.from}
                                             onChange={(e) => setCustomRange({ ...customRange, from: e.target.value })}
-                                            className="absolute inset-0 opacity-0 cursor-pointer"
+                                            className="absolute inset-0 opacity-0 cursor-pointer z-10 w-full"
+                                            onClick={(e) => (e.target as any).showPicker?.()}
                                         />
                                     </div>
-                                    <span className="text-muted-foreground opacity-40 px-1">—</span>
-                                    <div className="relative">
-                                        <span className="block text-[11px] font-black uppercase tracking-tight text-foreground transition-all hover:text-primary cursor-pointer whitespace-nowrap">
-                                            {new Date(customRange.to).toLocaleDateString('pt-BR')}
+                                    <span className="text-muted-foreground opacity-40 px-0.5">—</span>
+                                    <div className="relative group/date">
+                                        <span className="block text-[11px] font-black uppercase tracking-tight text-foreground transition-all group-hover/date:text-primary cursor-pointer whitespace-nowrap px-1">
+                                            {customRange.to.split('-').reverse().join('/')}
                                         </span>
                                         <input
                                             type="date"
                                             value={customRange.to}
                                             onChange={(e) => setCustomRange({ ...customRange, to: e.target.value })}
-                                            className="absolute inset-0 opacity-0 cursor-pointer"
+                                            className="absolute inset-0 opacity-0 cursor-pointer z-10 w-full"
+                                            onClick={(e) => (e.target as any).showPicker?.()}
                                         />
                                     </div>
                                 </>
