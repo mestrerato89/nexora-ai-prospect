@@ -1,7 +1,7 @@
 {
-  "name": "nexora-google-maps-scraper",
+  "name": "Rataria-google-maps-scraper",
   "version": "1.0.0",
-  "description": "Scraper local de Google Maps para uso pessoal - Nexora",
+  "description": "Scraper local de Google Maps para uso pessoal - Rataria",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

@@ -1,4 +1,4 @@
-# Nexora Google Maps Scraper v2.0 🎯
+# Rataria Google Maps Scraper v2.0 🎯
 
 Scraper local de Google Maps com seletores robustos e fallbacks.
 

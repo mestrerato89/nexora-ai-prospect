@@ -1,6 +1,6 @@
 project_id = "tbacrdopekqbpttasxua"
 
-[functions.nexora-chat]
+[functions.rataria-chat]
 verify_jwt = false
 
 [functions.prospect-search]

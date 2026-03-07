@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, "nexora_leads_db.json");
+const DB_PATH = path.join(__dirname, "Rataria_leads_db.json");
 
 let memoryDB = {
   leads: [],
