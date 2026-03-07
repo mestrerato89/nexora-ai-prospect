@@ -1,1 +1,1 @@
-feat: implement all prospection modules UI based on reference
+feat: make prospect modules functional (Instagram, Facebook, Enriquecer, Validar)

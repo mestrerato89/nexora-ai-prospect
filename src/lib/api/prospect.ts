@@ -20,6 +20,7 @@ export interface ProspectSearchParams {
   location: string;
   maxResults?: number;
   minRating?: number;
+  platform?: "google_maps" | "instagram" | "facebook";
 }
 
 const LOCAL_SCRAPER_URL = "http://localhost:3099";
@@ -209,7 +210,7 @@ async function searchCloud(params: ProspectSearchParams): Promise<{ businesses: 
   };
 }
 
-export type SearchSource = "scraper" | "ai" | "google";
+export type SearchSource = "scraper" | "ai" | "google" | "instagram" | "facebook";
 
 export async function searchProspects(
   params: ProspectSearchParams,
@@ -220,43 +221,61 @@ export async function searchProspects(
   // --- TIERED SEARCH STRATEGY ---
   onProgress?.([], "Iniciando busca inteligente...");
 
-  // 1. FIRST TIER: Local Scraper (Free / Unlimited)
-  // We always check if the local scraper is online first to save API costs.
-  const scraperOnline = await isScraperOnline();
-  if (scraperOnline) {
-    onProgress?.([], "Buscador local detectado! Consultando sem custos...");
+  // First Tier: If platform is Instagram or Facebook, we skip local scraper
+  // as the local scraper is built specifically for Google Maps.
+  if (params.platform === "instagram" || params.platform === "facebook") {
+    onProgress?.([], `Conectando com inteligência avançada para ${params.platform}...`);
     try {
-      const { businesses, searchId } = await searchLocal(params);
-      if (businesses.length > 0) {
-        return { results: prioritizeByLocation(businesses, params.location), source: "scraper" };
+      const cloudResponse = await searchCloud(params);
+      if (cloudResponse.businesses.length > 0) {
+        return {
+          // Skip prioritizeByLocation for social media, AI already does it
+          results: cloudResponse.businesses,
+          source: params.platform
+        };
       }
+    } catch (err: any) {
+      cloudError = err.message || `Erro na busca via ${params.platform}`;
+      console.warn(`[Prospect] API error for ${params.platform}:`, cloudError);
+    }
+  } else {
+    // Original local scraper logic for Google Maps
+    const scraperOnline = await isScraperOnline();
+    if (scraperOnline) {
+      onProgress?.([], "Buscador local detectado! Consultando sem custos...");
+      try {
+        const { businesses, searchId } = await searchLocal(params);
+        if (businesses.length > 0) {
+          return { results: prioritizeByLocation(businesses, params.location), source: "scraper" };
+        }
 
-      const results = await pollSearchStatus(params.niche, params.location, (partial, status) => {
-        onProgress?.(prioritizeByLocation(partial, params.location), status);
-      });
+        const results = await pollSearchStatus(params.niche, params.location, (partial, status) => {
+          onProgress?.(prioritizeByLocation(partial, params.location), status);
+        });
 
-      if (results.length > 0) {
-        return { results: prioritizeByLocation(results, params.location), source: "scraper" };
+        if (results.length > 0) {
+          return { results: prioritizeByLocation(results, params.location), source: "scraper" };
+        }
+      } catch (localErr) {
+        console.warn("[Prospect] Local scraper attempt failed, falling back to Cloud:", localErr);
       }
-    } catch (localErr) {
-      console.warn("[Prospect] Local scraper attempt failed, falling back to Cloud:", localErr);
     }
-  }
 
-  // 2. SECOND TIER: Google Cloud API (Paid / High Quality)
-  // If local is offline or failed, use the official API (which uses the $200 free credit).
-  onProgress?.([], "Buscador local offline. Conectando ao Google Cloud...");
-  try {
-    const cloudResponse = await searchCloud(params);
-    if (cloudResponse.businesses.length > 0) {
-      return {
-        results: prioritizeByLocation(cloudResponse.businesses, params.location),
-        source: cloudResponse.source
-      };
+    // 2. SECOND TIER: Google Cloud API (Paid / High Quality)
+    // If local is offline or failed, use the official API (which uses the $200 free credit).
+    onProgress?.([], "Buscador local offline. Conectando ao Google Cloud...");
+    try {
+      const cloudResponse = await searchCloud(params);
+      if (cloudResponse.businesses.length > 0) {
+        return {
+          results: prioritizeByLocation(cloudResponse.businesses, params.location),
+          source: cloudResponse.source
+        };
+      }
+    } catch (err: any) {
+      cloudError = err.message || "Erro na conexão Cloud";
+      console.warn("[Prospect] Cloud API error:", cloudError);
     }
-  } catch (err: any) {
-    cloudError = err.message || "Erro na conexão Cloud";
-    console.warn("[Prospect] Cloud API error:", cloudError);
   }
 
   // 3. THIRD TIER: Gemini Fallback (AI-powered search)

@@ -11,34 +11,34 @@ const CACHE_TTL_HOURS = 168; // 7 days
 
 // ── Text / location helpers ──────────────────────────────────────────────
 
-const STOP = new Set(["de","da","do","das","dos","e","em","na","no","bairro","cidade","estado","brasil"]);
+const STOP = new Set(["de", "da", "do", "das", "dos", "e", "em", "na", "no", "bairro", "cidade", "estado", "brasil"]);
 
 function norm(v: string) {
-  return v.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9\s,-]/g," ").replace(/\s+/g," ").trim();
+  return v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9\s,-]/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function locTerms(loc: string) {
-  const n = norm(loc); if(!n) return [];
-  const seg = n.split(/[,-/]/).map(s=>s.trim()).filter(s=>s.length>=3);
-  const wds = n.split(/\s+/).filter(w=>w.length>=3&&!STOP.has(w));
-  return [...new Set([...seg,...wds])];
+  const n = norm(loc); if (!n) return [];
+  const seg = n.split(/[,-/]/).map(s => s.trim()).filter(s => s.length >= 3);
+  const wds = n.split(/\s+/).filter(w => w.length >= 3 && !STOP.has(w));
+  return [...new Set([...seg, ...wds])];
 }
 
 function locScore(addr: string, loc: string) {
-  const a = norm(addr||""); if(!a) return 0;
-  const t = locTerms(loc); if(!t.length) return 1;
-  return t.reduce((s,x)=>(a.includes(x)?s+1:s),0);
+  const a = norm(addr || ""); if (!a) return 0;
+  const t = locTerms(loc); if (!t.length) return 1;
+  return t.reduce((s, x) => (a.includes(x) ? s + 1 : s), 0);
 }
 
-function rankByLoc<T extends {address:string;score?:number}>(items:T[],loc:string):T[]{
-  if(!items.length)return items;
-  const r=items.map(i=>({i,l:locScore(i.address,loc)})).sort((a,b)=>b.l!==a.l?b.l-a.l:(b.i.score||0)-(a.i.score||0));
-  const s=r.filter(x=>x.l>0);const m=Math.max(3,Math.ceil(r.length*0.4));
-  return (s.length>=m?s:r).map(x=>x.i);
+function rankByLoc<T extends { address: string; score?: number }>(items: T[], loc: string): T[] {
+  if (!items.length) return items;
+  const r = items.map(i => ({ i, l: locScore(i.address, loc) })).sort((a, b) => b.l !== a.l ? b.l - a.l : (b.i.score || 0) - (a.i.score || 0));
+  const s = r.filter(x => x.l > 0); const m = Math.max(3, Math.ceil(r.length * 0.4));
+  return (s.length >= m ? s : r).map(x => x.i);
 }
 
-function calcScore(b:any){
-  let s=0;if(b.phone)s+=20;if(b.website)s+=20;if(b.rating>0)s+=15;if(b.rating>=4)s+=10;if(b.reviews>50)s+=10;if(b.open)s+=10;if(b.hours)s+=10;if(b.confidence==="high")s+=5;return Math.min(s,100);
+function calcScore(b: any) {
+  let s = 0; if (b.phone) s += 20; if (b.website) s += 20; if (b.rating > 0) s += 15; if (b.rating >= 4) s += 10; if (b.reviews > 50) s += 10; if (b.open) s += 10; if (b.hours) s += 10; if (b.confidence === "high") s += 5; return Math.min(s, 100);
 }
 
 // ── DB cache ─────────────────────────────────────────────────────────────
@@ -169,7 +169,7 @@ async function searchGooglePlaces(apiKey: string, niche: string, location: strin
 async function getPlaceDetails(apiKey: string, placeId: string): Promise<any> {
   const fields = "formatted_phone_number,website,opening_hours";
   const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=${fields}&key=${apiKey}&language=pt-BR`;
-  
+
   const resp = await fetch(url);
   if (!resp.ok) {
     await resp.text();
@@ -182,8 +182,15 @@ async function getPlaceDetails(apiKey: string, placeId: string): Promise<any> {
 
 // ── Gemini with Google Search grounding (fallback) ───────────────────────
 
-async function geminiGroundedSearch(apiKey: string, niche: string, location: string, maxResults: number): Promise<string | null> {
-  const query = `Liste ${maxResults} empresas reais de "${niche}" em "${location}", Brasil. Para cada uma: nome, endereço completo, telefone, website, avaliação Google, número de avaliações, horário. Use dados reais do Google.`;
+async function geminiGroundedSearch(apiKey: string, niche: string, location: string, maxResults: number, platform?: string): Promise<string | null> {
+  let query = "";
+  if (platform === "instagram") {
+    query = `Liste ${maxResults} perfis comerciais de Instagram brasileiros de "${niche}" em "${location}". Para cada um retorne o que achar: nome, link ou @ do instagram (coloque no campo website), telefone, e categoria. Ignore campos que não encontrar. Use dados reais do Google.`;
+  } else if (platform === "facebook") {
+    query = `Liste ${maxResults} páginas comerciais do Facebook de "${niche}" em "${location}", Brasil. Para cada um retorne o que achar: nome, link da página (coloque no campo website), telefone, e categoria. Ignore campos que não encontrar. Use dados reais do Google.`;
+  } else {
+    query = `Liste ${maxResults} empresas reais de "${niche}" em "${location}", Brasil. Para cada uma: nome, endereço completo, telefone, website, avaliação Google, número de avaliações, horário. Use dados reais do Google.`;
+  }
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
@@ -245,12 +252,12 @@ ${text}`;
                 type: "ARRAY", items: {
                   type: "OBJECT",
                   properties: {
-                    name:{type:"STRING"},address:{type:"STRING"},phone:{type:"STRING"},
-                    website:{type:"STRING"},rating:{type:"NUMBER"},reviews:{type:"INTEGER"},
-                    category:{type:"STRING"},hours:{type:"STRING"},open:{type:"BOOLEAN"},
-                    confidence:{type:"STRING"},
+                    name: { type: "STRING" }, address: { type: "STRING" }, phone: { type: "STRING" },
+                    website: { type: "STRING" }, rating: { type: "NUMBER" }, reviews: { type: "INTEGER" },
+                    category: { type: "STRING" }, hours: { type: "STRING" }, open: { type: "BOOLEAN" },
+                    confidence: { type: "STRING" },
                   },
-                  required:["name","address","phone","website","rating","reviews","category","open","confidence"],
+                  required: ["name", "address", "phone", "website", "rating", "reviews", "category", "open", "confidence"],
                 },
               },
             },
@@ -264,7 +271,7 @@ ${text}`;
 
   if (!resp.ok) { await resp.text(); return []; }
   const data = await resp.json();
-  const fc = data.candidates?.[0]?.content?.parts?.find((p:any)=>p.functionCall)?.functionCall;
+  const fc = data.candidates?.[0]?.content?.parts?.find((p: any) => p.functionCall)?.functionCall;
   return fc?.args?.businesses || [];
 }
 
@@ -297,17 +304,17 @@ REGRAS CRÍTICAS:
                 type: "array", items: {
                   type: "object",
                   properties: {
-                    name:{type:"string"},address:{type:"string"},phone:{type:"string"},
-                    website:{type:"string"},rating:{type:"number"},reviews:{type:"integer"},
-                    category:{type:"string"},hours:{type:"string"},open:{type:"boolean"},
-                    confidence:{type:"string",enum:["high","medium","low"]},
+                    name: { type: "string" }, address: { type: "string" }, phone: { type: "string" },
+                    website: { type: "string" }, rating: { type: "number" }, reviews: { type: "integer" },
+                    category: { type: "string" }, hours: { type: "string" }, open: { type: "boolean" },
+                    confidence: { type: "string", enum: ["high", "medium", "low"] },
                   },
-                  required:["name","address","phone","website","rating","reviews","category","open","confidence"],
-                  additionalProperties:false,
+                  required: ["name", "address", "phone", "website", "rating", "reviews", "category", "open", "confidence"],
+                  additionalProperties: false,
                 },
               },
             },
-            required:["businesses"],additionalProperties:false,
+            required: ["businesses"], additionalProperties: false,
           },
         },
       }],
@@ -335,7 +342,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { niche, location, maxResults = 20, minRating = 0 } = await req.json();
+    const { niche, location, maxResults = 20, minRating = 0, platform } = await req.json();
     if (!niche || !location) {
       return new Response(JSON.stringify({ error: "Nicho e localização são obrigatórios" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -357,7 +364,8 @@ serve(async (req) => {
     let source = "ai_knowledge";
 
     // ── Strategy 1: Google Places API (real data) ──
-    if (GOOGLE_MAPS_KEY) {
+    // Only use for standard (google_maps) search
+    if (GOOGLE_MAPS_KEY && (!platform || platform === "google_maps")) {
       console.log("[prospect-search] Trying Google Places API…");
       try {
         businesses = await searchGooglePlaces(GOOGLE_MAPS_KEY, niche, location, maxResults);
@@ -372,8 +380,8 @@ serve(async (req) => {
 
     // ── Strategy 2: Gemini + Google Search grounding ──
     if (!businesses.length && GEMINI_KEY) {
-      console.log("[prospect-search] Trying Gemini Google Search grounding…");
-      const groundedText = await geminiGroundedSearch(GEMINI_KEY, niche, location, maxResults);
+      console.log(`[prospect-search] Trying Gemini Google Search grounding for ${platform || "google_maps"}…`);
+      const groundedText = await geminiGroundedSearch(GEMINI_KEY, niche, location, maxResults, platform);
 
       if (groundedText) {
         console.log("[prospect-search] Got grounded text, structuring…");
