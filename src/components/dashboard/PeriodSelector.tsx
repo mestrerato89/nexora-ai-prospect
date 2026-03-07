@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
@@ -25,30 +26,51 @@ export function PeriodSelector({
     subtitle = "Visão Geral e Métricas",
     icon
 }: PeriodSelectorProps) {
+    const monthInputRef = useRef<HTMLInputElement>(null);
+
     const changeMonth = (offset: number) => {
         if (viewMode === 'range') return;
-        const date = new Date(selectedMonth + "-01");
+
+        const parts = selectedMonth.split('-');
+        let year = parseInt(parts[0], 10);
+        let month = parseInt(parts[1], 10);
+
         if (viewMode === 'month') {
-            date.setMonth(date.getMonth() + offset);
+            month += offset;
+            if (month > 12) { month = 1; year += 1; }
+            if (month < 1) { month = 12; year -= 1; }
         } else {
-            date.setFullYear(date.getFullYear() + offset);
+            year += offset;
         }
-        setSelectedMonth(date.toISOString().substring(0, 7));
+
+        setSelectedMonth(`${year}-${String(month).padStart(2, '0')}`);
     };
 
     const formatSelectedDate = () => {
         if (viewMode === 'range') {
-            const from = new Date(customRange.from).toLocaleDateString('pt-BR');
-            const to = new Date(customRange.to).toLocaleDateString('pt-BR');
+            const from = new Date(customRange.from + "T12:00:00").toLocaleDateString('pt-BR');
+            const to = new Date(customRange.to + "T12:00:00").toLocaleDateString('pt-BR');
             return `${from} — ${to}`;
         }
-        const date = new Date(selectedMonth + "-15");
+        const parts = selectedMonth.split('-');
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10);
+
         if (viewMode === 'year') {
-            return `Ano de ${date.getFullYear()}`;
+            return `Ano de ${year}`;
         }
-        // Capitalize first letter of month
-        const formatted = date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-        return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+
+        const monthNames = [
+            'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+            'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+        ];
+        return `${monthNames[month - 1]} de ${year}`;
+    };
+
+    const handleMonthTextClick = () => {
+        if (monthInputRef.current) {
+            (monthInputRef.current as any).showPicker?.();
+        }
     };
 
     return (
@@ -99,7 +121,7 @@ export function PeriodSelector({
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={(e) => { e.stopPropagation(); changeMonth(-1); }}
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); changeMonth(-1); }}
                                 className="h-8 w-8 rounded-full hover:bg-primary/10 text-primary transition-all active:scale-90"
                             >
                                 <ChevronLeft className="h-5 w-5" />
@@ -137,10 +159,14 @@ export function PeriodSelector({
                                 </>
                             ) : (
                                 <>
-                                    <span className="block text-sm font-black uppercase tracking-tight text-foreground transition-all group-hover:text-primary cursor-default whitespace-nowrap">
+                                    <span
+                                        className="block text-sm font-black uppercase tracking-tight text-foreground transition-all hover:text-primary cursor-pointer whitespace-nowrap"
+                                        onClick={handleMonthTextClick}
+                                    >
                                         {formatSelectedDate()}
                                     </span>
                                     <input
+                                        ref={monthInputRef}
                                         type={viewMode === 'month' ? "month" : "number"}
                                         value={viewMode === 'month' ? selectedMonth : selectedMonth.split('-')[0]}
                                         onChange={(e) => {
@@ -151,12 +177,13 @@ export function PeriodSelector({
                                             }
                                         }}
                                         className="absolute inset-0 opacity-0 cursor-pointer"
+                                        style={{ pointerEvents: 'none' }}
                                     />
                                 </>
                             )}
 
                             <p className="absolute -bottom-4 left-0 right-0 text-[8px] font-mono font-black uppercase text-primary/60 tracking-tighter flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                                {viewMode === 'range' ? 'Editar Datas' : 'Alterar Período'} <Calendar className="h-2 w-2" />
+                                {viewMode === 'range' ? 'Editar Datas' : 'Clique para escolher'} <Calendar className="h-2 w-2" />
                             </p>
                         </div>
 
@@ -164,7 +191,7 @@ export function PeriodSelector({
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={(e) => { e.stopPropagation(); changeMonth(1); }}
+                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); changeMonth(1); }}
                                 className="h-8 w-8 rounded-full hover:bg-primary/10 text-primary transition-all active:scale-90"
                             >
                                 <ChevronRight className="h-5 w-5" />
