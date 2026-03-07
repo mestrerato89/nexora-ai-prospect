@@ -9,10 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Users, Search, Plus, Phone, Globe, Mail, MessageSquare, Trash2, LayoutGrid, List, Star, MapPin, ExternalLink, Archive, RotateCcw, Calendar } from "lucide-react";
+import { Users, Search, Plus, Phone, Globe, Mail, MessageSquare, Trash2, LayoutGrid, List, Star, MapPin, ExternalLink, Archive, RotateCcw, Calendar, DollarSign, Clock, GripVertical, PhoneCall } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { motion, AnimatePresence } from "framer-motion";
-import { format, subWeeks, subMonths, startOfMonth, endOfMonth, startOfYear, startOfDay, endOfDay, isAfter, isBefore, parseISO } from "date-fns";
+import { format, subWeeks, subMonths, startOfMonth, endOfMonth, startOfYear, startOfDay, endOfDay, isAfter, isBefore, parseISO, differenceInDays } from "date-fns";
 import { createNotification } from "@/lib/notifications";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -54,102 +54,155 @@ const LeadCard = ({
   showArchived: boolean;
   prospectorName?: string;
   onClaim: (id: string) => void;
-}) => (
-  <motion.div
-    layout
-    initial={{ opacity: 0, scale: 0.98 }}
-    animate={{ opacity: 1, scale: 1 }}
-    exit={{ opacity: 0, scale: 0.98 }}
-    transition={{ duration: 0.2 }}
-    draggable
-    onDragStart={() => onDragStart(lead.id)}
-    onClick={() => onClick(lead)}
-    className={`bg-card rounded-lg border border-border p-2 card-hover cursor-pointer group/card ${compact ? `border-l-4 ${statusConfig[lead.status as Status]?.kanbanColor || ""}` : ""
-      }`}
-  >
-    <div className="flex items-start justify-between gap-2">
-      <div className="flex flex-col flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
-          <h4 className="font-semibold text-[13px] text-foreground group-hover/card:text-primary transition-colors leading-tight line-clamp-2">{lead.name}</h4>
-          {!compact && (
-            <Badge className={`${statusConfig[lead.status as Status]?.color || ""} border-0 text-[10px]`}>
-              {statusConfig[lead.status as Status]?.label || lead.status}
-            </Badge>
+}) => {
+  const daysAgo = differenceInDays(new Date(), parseISO(lead.created_at));
+  const sc = statusConfig[lead.status as Status];
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      transition={{ duration: 0.2 }}
+      draggable
+      onDragStart={() => onDragStart(lead.id)}
+      className={`bg-card rounded-2xl border border-border/60 overflow-hidden card-hover group/card ${compact ? `border-l-4 ${sc?.kanbanColor || ""}` : ""
+        }`}
+    >
+      {/* Header row: drag handle + name + badges */}
+      <div className="flex items-start gap-2 p-3 pb-0">
+        <div className="pt-1 cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors">
+          <GripVertical className="h-4 w-4" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <h4
+              className="font-black text-sm text-foreground leading-tight line-clamp-2 uppercase tracking-wide cursor-pointer hover:text-primary transition-colors"
+              onClick={() => onClick(lead)}
+            >
+              {lead.name}
+            </h4>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono bg-secondary/60 px-1.5 py-0.5 rounded">
+                <Clock className="h-3 w-3" />{daysAgo}d
+              </span>
+              {lead.score != null && (
+                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${(lead.score || 0) >= 80 ? "bg-emerald-500/20 text-emerald-500" :
+                    (lead.score || 0) >= 50 ? "bg-amber-500/20 text-amber-500" :
+                      "bg-destructive/20 text-destructive"
+                  }`}>
+                  {lead.score}pts
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="px-3 pt-1.5 pb-3 pl-9 space-y-1.5">
+        {/* Niche */}
+        {lead.niche && (
+          <p className="text-xs text-primary/80 font-semibold">{lead.niche}</p>
+        )}
+
+        {/* Website status */}
+        <div className="flex items-center gap-1.5 text-[11px]">
+          <Globe className="h-3 w-3 text-muted-foreground/60" />
+          {lead.website ? (
+            <a
+              href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`}
+              target="_blank"
+              rel="noopener"
+              onClick={(e) => e.stopPropagation()}
+              className="text-primary hover:underline truncate max-w-[180px]"
+            >
+              {lead.website.replace(/^https?:\/\//, "")}
+            </a>
+          ) : (
+            <span className="text-muted-foreground/60 italic">Sem site</span>
           )}
         </div>
-        <div className="flex items-center gap-x-2 gap-y-1 text-[10px] text-muted-foreground flex-wrap mt-0.5">
-          {lead.niche && <span className="whitespace-nowrap">{lead.niche}</span>}
-          {lead.city && <span className="whitespace-nowrap">{lead.city}</span>}
-          {lead.rating && (
-            <span className="text-warning font-bold flex items-center gap-0.5">★ {Number(lead.rating).toFixed(1)}</span>
+
+        {/* Address */}
+        {(lead.address || lead.city) && (
+          <div className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
+            <MapPin className="h-3 w-3 shrink-0 mt-0.5 text-muted-foreground/60" />
+            <span className="line-clamp-2 leading-tight">{lead.address || lead.city}</span>
+          </div>
+        )}
+
+        {/* Rating + Phone row */}
+        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+          {lead.rating != null && Number(lead.rating) > 0 && (
+            <span className="flex items-center gap-0.5 font-bold">
+              <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
+              {Number(lead.rating).toFixed(1)}
+            </span>
           )}
-          <span className="flex items-center gap-1">
-            {format(parseISO(lead.created_at), "dd/MM/yyyy")}
-          </span>
-          {!lead.user_id ? (
-            <Button
-              size="sm"
-              variant="default"
-              className="h-6 px-3 py-0 text-[9px] font-black uppercase rounded-full gap-1.5 active:scale-90 bg-primary/20 hover:bg-primary text-primary hover:text-primary-foreground border-0 transition-all shadow-sm"
-              onClick={(e) => { e.stopPropagation(); onClaim(lead.id); }}
-            >
-              <Users className="h-3 w-3" /> Pegar Lead
-            </Button>
-          ) : prospectorName && (
-            <span className="flex items-center gap-1 text-primary/80 font-bold uppercase tracking-tighter">
-              <Users className="h-3 w-3" />
-              {prospectorName}
+          {lead.phone && (
+            <span className="flex items-center gap-1">
+              <Phone className="h-3 w-3 text-muted-foreground/60" />
+              {lead.phone}
             </span>
           )}
         </div>
-      </div>
-      <div className="flex flex-col gap-1 shrink-0 ml-1 border-l border-border/30 pl-2">
-        {lead.phone && (
-          <a href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`} target="_blank" rel="noopener"
-            onClick={(e) => e.stopPropagation()}
-            className="h-7 w-7 rounded flex items-center justify-center bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors"
-            title="WhatsApp">
-            <MessageSquare className="h-3.5 w-3.5 text-emerald-500" />
-          </a>
+
+        {/* Prospector / Claim */}
+        {!lead.user_id ? (
+          <Button
+            size="sm"
+            variant="default"
+            className="h-6 px-3 py-0 text-[9px] font-black uppercase rounded-full gap-1.5 active:scale-90 bg-primary/20 hover:bg-primary text-primary hover:text-primary-foreground border-0 transition-all shadow-sm"
+            onClick={(e) => { e.stopPropagation(); onClaim(lead.id); }}
+          >
+            <Users className="h-3 w-3" /> Pegar Lead
+          </Button>
+        ) : prospectorName && (
+          <span className="flex items-center gap-1 text-[10px] text-primary/80 font-bold uppercase tracking-tighter">
+            <Users className="h-3 w-3" />
+            {prospectorName}
+          </span>
         )}
-        <a href={`https://www.google.com/maps/search/${encodeURIComponent(lead.name + " " + (lead.address || lead.city || ""))}`}
-          target="_blank" rel="noopener"
-          onClick={(e) => e.stopPropagation()}
-          className="h-7 w-7 rounded flex items-center justify-center bg-blue-500/10 hover:bg-blue-500/20 transition-colors"
-          title="Google Maps">
-          <MapPin className="h-3.5 w-3.5 text-blue-500" />
-        </a>
-        {showArchived ? (
-          <button onClick={(e) => { e.stopPropagation(); restoreLead(lead.id); }}
-            className="h-7 w-7 rounded flex items-center justify-center bg-primary/10 hover:bg-primary/20 transition-colors"
-            title="Restaurar Lead">
-            <RotateCcw className="h-3.5 w-3.5 text-primary" />
+
+        {/* Action buttons row */}
+        <div className="flex items-center gap-2 pt-1">
+          {lead.phone && (
+            <a
+              href={`https://wa.me/${lead.phone.replace(/\D/g, "")}`}
+              target="_blank"
+              rel="noopener"
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 text-[11px] font-bold transition-colors"
+            >
+              <MessageSquare className="h-3.5 w-3.5" /> WhatsApp
+            </a>
+          )}
+          {lead.phone && (
+            <a
+              href={`tel:${lead.phone.replace(/\D/g, "")}`}
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 text-[11px] font-bold transition-colors"
+            >
+              <PhoneCall className="h-3.5 w-3.5" /> Ligar
+            </a>
+          )}
+        </div>
+
+        {/* Footer: Details link */}
+        <div className="flex items-center justify-end pt-0.5">
+          <button
+            onClick={() => onClick(lead)}
+            className="text-[11px] text-primary/70 hover:text-primary font-semibold transition-colors"
+          >
+            Detalhes
           </button>
-        ) : (
-          <>
-            <button onClick={(e) => { e.stopPropagation(); archiveLead(lead.id); }}
-              className="h-7 w-7 rounded flex items-center justify-center bg-warning/10 hover:bg-warning/20 transition-colors"
-              title="Arquivar Lead">
-              <Archive className="h-3.5 w-3.5 text-warning" />
-            </button>
-            <button onClick={(e) => { e.stopPropagation(); if (confirm("Excluir permanentemente este lead?")) permanentDeleteLead(lead.id); }}
-              className="h-7 w-7 rounded flex items-center justify-center bg-destructive/10 hover:bg-destructive/20 transition-colors"
-              title="Excluir Permanentemente">
-              <Trash2 className="h-3.5 w-3.5 text-destructive" />
-            </button>
-          </>
-        )}
+        </div>
       </div>
-    </div>
-    {!compact && (
-      <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-        {lead.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3 text-primary/60" />{lead.phone}</span>}
-        {lead.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3 text-primary/60" />{lead.email}</span>}
-        {lead.website && <span className="flex items-center gap-1"><Globe className="h-3 w-3 text-primary/60" />{lead.website}</span>}
-      </div>
-    )}
-  </motion.div>
-);
+    </motion.div>
+  );
+};
 
 const LeadProfileDialog = ({
   selectedLead,
@@ -355,7 +408,7 @@ export default function Leads() {
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [view, setView] = useState<"kanban" | "list">("kanban");
-  const [newLead, setNewLead] = useState({ name: "", email: "", phone: "", niche: "", city: "", state: "", website: "" });
+  const [newLead, setNewLead] = useState({ name: "", email: "", phone: "", niche: "", city: "", state: "", website: "", address: "" });
   const [draggedLead, setDraggedLead] = useState<string | null>(null);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showArchived, setShowArchived] = useState(false);
@@ -412,13 +465,14 @@ export default function Leads() {
       phone: newLead.phone || null,
       niche: newLead.niche || null,
       website: newLead.website || null,
+      address: newLead.address || null,
       has_phone: !!newLead.phone,
       has_website: !!newLead.website,
     });
     if (error) { toast.error(error.message); return; }
     toast.success("Lead adicionado!");
     setShowAdd(false);
-    setNewLead({ name: "", email: "", phone: "", niche: "", city: "", state: "", website: "" });
+    setNewLead({ name: "", email: "", phone: "", niche: "", city: "", state: "", website: "", address: "" });
     fetchLeads();
   };
 
@@ -625,15 +679,20 @@ export default function Leads() {
               <DialogTrigger asChild>
                 <Button className="gap-2"><Plus className="h-4 w-4" /> Novo Lead</Button>
               </DialogTrigger>
-              <DialogContent className="bg-card border-border">
-                <DialogHeader><DialogTitle>Novo Lead Manual</DialogTitle></DialogHeader>
+              <DialogContent className="bg-card border-border max-w-lg rounded-3xl">
+                <DialogHeader><DialogTitle className="text-xl font-black">Novo Lead Manual</DialogTitle></DialogHeader>
                 <div className="space-y-3">
-                  <div><Label>Nome *</Label><Input value={newLead.name} onChange={(e) => setNewLead({ ...newLead, name: e.target.value })} className="bg-secondary border-border" /></div>
+                  <div><Label>Nome *</Label><Input value={newLead.name} onChange={(e) => setNewLead({ ...newLead, name: e.target.value })} className="bg-secondary border-border" placeholder="Nome do Lead" /></div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div><Label>Email (Opcional)</Label><Input value={newLead.email} onChange={(e) => setNewLead({ ...newLead, email: e.target.value })} className="bg-secondary border-border" /></div>
-                    <div><Label>Telefone (Opcional)</Label><Input value={newLead.phone} onChange={(e) => setNewLead({ ...newLead, phone: e.target.value })} className="bg-secondary border-border" /></div>
+                    <div><Label>Nicho</Label><Input value={newLead.niche} onChange={(e) => setNewLead({ ...newLead, niche: e.target.value })} className="bg-secondary border-border" placeholder="Ex: Barbearia" /></div>
+                    <div><Label>Website</Label><Input value={newLead.website} onChange={(e) => setNewLead({ ...newLead, website: e.target.value })} className="bg-secondary border-border" placeholder="Ex: www.site.com" /></div>
                   </div>
-                  <Button onClick={addLead} className="w-full">Criar</Button>
+                  <div><Label>Endereço</Label><Input value={newLead.address} onChange={(e) => setNewLead({ ...newLead, address: e.target.value })} className="bg-secondary border-border" placeholder="Rua, Número, Bairro, Cidade" /></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><Label>Email (Opcional)</Label><Input value={newLead.email} onChange={(e) => setNewLead({ ...newLead, email: e.target.value })} className="bg-secondary border-border" placeholder="email@exemplo.com" /></div>
+                    <div><Label>Telefone (Opcional)</Label><Input value={newLead.phone} onChange={(e) => setNewLead({ ...newLead, phone: e.target.value })} className="bg-secondary border-border" placeholder="+55 21 99999-9999" /></div>
+                  </div>
+                  <Button onClick={addLead} className="w-full h-12 rounded-2xl font-bold">Criar Lead</Button>
                 </div>
               </DialogContent>
             </Dialog>
