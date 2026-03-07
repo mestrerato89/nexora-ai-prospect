@@ -3,6 +3,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { LifeBuoy, Send, User, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 
@@ -29,9 +30,12 @@ export default function Suporte() {
     let assistantSoFar = "";
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
       const resp = await fetch(CHAT_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ messages: newMessages }),
       });
 

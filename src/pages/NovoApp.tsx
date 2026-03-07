@@ -95,11 +95,14 @@ export default function NovoApp() {
     }
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           messages: [{
@@ -213,11 +216,10 @@ Formato: Markdown bem estruturado, pronto para ser usado como especificação t�
         <div className="flex items-center gap-2">
           {stepLabels.map((label, i) => (
             <div key={i} className="flex items-center gap-2 flex-1">
-              <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                i < step ? "bg-primary text-primary-foreground" :
-                i === step ? "bg-primary text-primary-foreground ring-2 ring-primary/30" :
-                "bg-secondary text-muted-foreground"
-              }`}>
+              <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${i < step ? "bg-primary text-primary-foreground" :
+                  i === step ? "bg-primary text-primary-foreground ring-2 ring-primary/30" :
+                    "bg-secondary text-muted-foreground"
+                }`}>
                 {i < step ? <Check className="h-4 w-4" /> : i + 1}
               </div>
               <span className="text-xs text-muted-foreground hidden sm:block truncate">{label}</span>
@@ -244,11 +246,10 @@ Formato: Markdown bem estruturado, pronto para ser usado como especificação t�
                     <button
                       key={cat.id}
                       onClick={() => setCategoryFilter(cat.id)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                        isActive
+                      className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${isActive
                           ? "bg-primary text-primary-foreground shadow-md"
                           : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 border border-border"
-                      }`}
+                        }`}
                     >
                       <Icon className="h-4 w-4" />
                       {cat.label}
@@ -419,6 +420,16 @@ Formato: Markdown bem estruturado, pronto para ser usado como especificação t�
                   <Button onClick={() => setStep(3)} className="gap-2 flex-1">
                     Salvar Projeto <ArrowRight className="h-4 w-4" />
                   </Button>
+                </div>
+              )}
+
+              {!generating && !generatedPrompt && (
+                <div className="bg-card rounded-xl border border-destructive/20 p-12 text-center space-y-4">
+                  <p className="text-lg font-semibold text-destructive">Ocorreu um erro ao gerar o prompt.</p>
+                  <div className="flex gap-3 justify-center">
+                    <Button variant="outline" onClick={() => setStep(1)} className="gap-2 border-border"><ArrowLeft className="h-4 w-4" /> Voltar</Button>
+                    <Button onClick={() => { setGeneratedPrompt(""); handleGenerate(); }} className="gap-2"><Sparkles className="h-4 w-4" /> Tentar Novamente</Button>
+                  </div>
                 </div>
               )}
             </motion.div>

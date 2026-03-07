@@ -3,6 +3,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Bot, Send, User, Plus, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 
@@ -46,11 +47,14 @@ export default function Assistente() {
     let assistantSoFar = "";
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ messages: newMessages }),
       });
@@ -148,9 +152,8 @@ export default function Assistente() {
                   <button
                     key={c.id}
                     onClick={() => setActiveId(c.id)}
-                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors group ${
-                      c.id === activeId ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/50"
-                    }`}
+                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors group ${c.id === activeId ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/50"
+                      }`}
                   >
                     <Bot className="h-4 w-4 shrink-0" />
                     <span className="truncate flex-1 text-left">{c.title}</span>
@@ -214,11 +217,10 @@ export default function Assistente() {
                     <Bot className="h-4 w-4 text-primary" />
                   </div>
                 )}
-                <div className={`max-w-[80%] rounded-xl px-4 py-3 text-sm ${
-                  m.role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-card border border-border text-foreground"
-                }`}>
+                <div className={`max-w-[80%] rounded-xl px-4 py-3 text-sm ${m.role === "user"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card border border-border text-foreground"
+                  }`}>
                   {m.role === "assistant" ? (
                     <div className="prose prose-sm prose-invert max-w-none [&>p]:mb-2 [&>ul]:mb-2 [&>ol]:mb-2 [&>pre]:bg-secondary [&>pre]:p-3 [&>pre]:rounded-lg">
                       <ReactMarkdown>{m.content}</ReactMarkdown>
