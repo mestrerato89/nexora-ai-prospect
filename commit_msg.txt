@@ -1,1 +1,1 @@
-feat: make prospect modules functional (Instagram, Facebook, Enriquecer, Validar)
+fix: syntax error in edge function and improve social search

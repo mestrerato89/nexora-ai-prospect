@@ -183,11 +183,13 @@ async function getPlaceDetails(apiKey: string, placeId: string): Promise<any> {
 // ── Gemini with Google Search grounding (fallback) ───────────────────────
 
 async function geminiGroundedSearch(apiKey: string, niche: string, location: string, maxResults: number, platform?: string): Promise<string | null> {
+  const cleanNiche = niche.replace(/^#/, '').trim();
   let query = "";
+
   if (platform === "instagram") {
-    query = `Liste ${maxResults} perfis comerciais de Instagram brasileiros de "${niche}" em "${location}". Para cada um retorne o que achar: nome, link ou @ do instagram (coloque no campo website), telefone, e categoria. Ignore campos que não encontrar. Use dados reais do Google.`;
+    query = `Encontre ${maxResults} perfis reais no Instagram de "${cleanNiche}" que atuam em "${location}". Retorne o nome do negócio, o @ ou link do perfil (no campo website) e o telefone se houver. Se não houver endereço físico, use "${location}" como endereço.`;
   } else if (platform === "facebook") {
-    query = `Liste ${maxResults} páginas comerciais do Facebook de "${niche}" em "${location}", Brasil. Para cada um retorne o que achar: nome, link da página (coloque no campo website), telefone, e categoria. Ignore campos que não encontrar. Use dados reais do Google.`;
+    query = `Encontre ${maxResults} páginas comerciais reais no Facebook de "${cleanNiche}" em "${location}". Retorne o nome, link da página e telefone. Se não houver endereço, use "${location}" como endereço.`;
   } else {
     query = `Liste ${maxResults} empresas reais de "${niche}" em "${location}", Brasil. Para cada uma: nome, endereço completo, telefone, website, avaliação Google, número de avaliações, horário. Use dados reais do Google.`;
   }
@@ -272,7 +274,14 @@ ${text}`;
   if (!resp.ok) { await resp.text(); return []; }
   const data = await resp.json();
   const fc = data.candidates?.[0]?.content?.parts?.find((p: any) => p.functionCall)?.functionCall;
-  return fc?.args?.businesses || [];
+  const businesses = fc?.args?.businesses || [];
+
+  // Se for rede social e o endereço vier vazio, preenchemos com a localização da busca
+  return businesses.map((b: any) => ({
+    ...b,
+    address: b.address || location,
+    confidence: b.confidence || (b.phone || b.website ? "high" : "medium")
+  }));
 }
 
 // ── Lovable AI fallback (knowledge-based) ────────────────────────────────
@@ -342,7 +351,9 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { niche, location, maxResults = 20, minRating = 0, platform } = await req.json();
+    const body = await req.json();
+    const { niche, location, maxResults = 20, minRating = 0, platform } = body;
+
     if (!niche || !location) {
       return new Response(JSON.stringify({ error: "Nicho e localização são obrigatórios" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -358,13 +369,11 @@ serve(async (req) => {
 
     const GOOGLE_MAPS_KEY = Deno.env.get("GOOGLE_MAPS_API_KEY");
     const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY");
-    const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     let businesses: any[] = [];
     let source = "ai_knowledge";
 
     // ── Strategy 1: Google Places API (real data) ──
-    // Only use for standard (google_maps) search
     if (GOOGLE_MAPS_KEY && (!platform || platform === "google_maps")) {
       console.log("[prospect-search] Trying Google Places API…");
       try {
@@ -388,12 +397,24 @@ serve(async (req) => {
         const raw = await geminiStructure(GEMINI_KEY, groundedText, niche, location, minRating);
         if (raw.length > 0) {
           businesses = raw;
-          source = "google_search";
+          source = platform ? platform : "google_search";
         }
       }
     }
 
-    // Lovable AI removida da prospecção — apenas Google Places e Gemini
+    // ── Strategy 3: AI Knowledge Fallback (for social platforms especially) ──
+    if (!businesses.length && platform && (platform === "instagram" || platform === "facebook")) {
+      console.log(`[prospect-search] Grounding failed for ${platform}, trying knowledge-based search…`);
+      try {
+        const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY") || GEMINI_KEY;
+        if (LOVABLE_KEY) {
+          businesses = await lovableFallback(LOVABLE_KEY, niche, location, maxResults, minRating);
+          if (businesses.length > 0) source = `ai_knowledge_${platform}`;
+        }
+      } catch (e) {
+        console.error("[prospect-search] Knowledge fallback error:", e);
+      }
+    }
 
     if (!businesses.length) {
       return new Response(JSON.stringify({ error: "Nenhuma empresa encontrada. Tente outro nicho ou localização." }),
@@ -407,11 +428,11 @@ serve(async (req) => {
         .map((b: any, i: number) => ({
           id: `prospect-${Date.now()}-${i}`,
           name: b.name || "",
-          address: b.address || "",
+          address: b.address || location,
           phone: b.phone || "",
           website: b.website || "",
-          rating: b.rating || 0,
-          reviews: b.reviews || 0,
+          rating: Number(b.rating) || 0,
+          reviews: Number(b.reviews) || 0,
           category: b.category || niche,
           hours: b.hours || "",
           open: b.open ?? true,
@@ -432,7 +453,7 @@ serve(async (req) => {
   } catch (e) {
     console.error("[prospect-search] Error:", e);
     const msg = e instanceof Error ? e.message : "Erro desconhecido";
-    const status = msg.includes("429") || msg.includes("Aguarde") ? 429 : 500;
+    const status = (msg.includes("429") || msg.includes("Aguarde")) ? 429 : 500;
     return new Response(JSON.stringify({ error: msg }),
       { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
