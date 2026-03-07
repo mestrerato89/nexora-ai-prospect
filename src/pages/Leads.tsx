@@ -627,8 +627,8 @@ export default function Leads() {
                 <div className="space-y-3">
                   <div><Label>Nome *</Label><Input value={newLead.name} onChange={(e) => setNewLead({ ...newLead, name: e.target.value })} className="bg-secondary border-border" /></div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div><Label>Email</Label><Input value={newLead.email} onChange={(e) => setNewLead({ ...newLead, email: e.target.value })} className="bg-secondary border-border" /></div>
-                    <div><Label>Telefone</Label><Input value={newLead.phone} onChange={(e) => setNewLead({ ...newLead, phone: e.target.value })} className="bg-secondary border-border" /></div>
+                    <div><Label>Email (Opcional)</Label><Input value={newLead.email} onChange={(e) => setNewLead({ ...newLead, email: e.target.value })} className="bg-secondary border-border" /></div>
+                    <div><Label>Telefone (Opcional)</Label><Input value={newLead.phone} onChange={(e) => setNewLead({ ...newLead, phone: e.target.value })} className="bg-secondary border-border" /></div>
                   </div>
                   <Button onClick={addLead} className="w-full">Criar</Button>
                 </div>
