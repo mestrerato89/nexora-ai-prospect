@@ -53,7 +53,7 @@ const ALL_FEATURES = [
   "Agendamento online", "Push notifications", "Analytics", "Integração WhatsApp",
 ];
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/rataria-chat`;
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/nexora-chat`;
 
 export default function NovoApp() {
   const { user } = useAuth();
@@ -217,8 +217,8 @@ Formato: Markdown bem estruturado, pronto para ser usado como especificação t�
           {stepLabels.map((label, i) => (
             <div key={i} className="flex items-center gap-2 flex-1">
               <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${i < step ? "bg-primary text-primary-foreground" :
-                  i === step ? "bg-primary text-primary-foreground ring-2 ring-primary/30" :
-                    "bg-secondary text-muted-foreground"
+                i === step ? "bg-primary text-primary-foreground ring-2 ring-primary/30" :
+                  "bg-secondary text-muted-foreground"
                 }`}>
                 {i < step ? <Check className="h-4 w-4" /> : i + 1}
               </div>
@@ -247,8 +247,8 @@ Formato: Markdown bem estruturado, pronto para ser usado como especificação t�
                       key={cat.id}
                       onClick={() => setCategoryFilter(cat.id)}
                       className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${isActive
-                          ? "bg-primary text-primary-foreground shadow-md"
-                          : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 border border-border"
+                        ? "bg-primary text-primary-foreground shadow-md"
+                        : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 border border-border"
                         }`}
                     >
                       <Icon className="h-4 w-4" />
