@@ -59,6 +59,7 @@ const Index = () => {
     to: new Date().toISOString().split('T')[0]
   });
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<{ display_name?: string, role?: string } | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -79,7 +80,7 @@ const Index = () => {
         end = new Date(customRange.to + "T23:59:59");
       }
 
-      const [leadsRes, followUpsRes, paymentsRes] = await Promise.all([
+      const [leadsRes, followUpsRes, paymentsRes, profileRes] = await Promise.all([
         supabase.from("leads")
           .select("*")
           .eq("user_id", user.id),
@@ -92,12 +93,17 @@ const Index = () => {
         supabase.from("payments")
           .select("*")
           .eq("user_id", user.id)
-          .eq("status", "aprovado")
+          .eq("status", "aprovado"),
+        supabase.from("profiles")
+          .select("display_name, role")
+          .eq("user_id", user.id)
+          .maybeSingle()
       ]);
 
       const leads = leadsRes.data || [];
       const followUps = followUpsRes.data || [];
       const payments = paymentsRes.data || [];
+      if (profileRes.data) setProfile(profileRes.data);
       const now = new Date();
 
       // Filter leads by the selected period for the stats cards
@@ -201,6 +207,10 @@ const Index = () => {
     visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" as const } },
   };
 
+  const roleDisplay = profile?.role === 'admin' ? 'Admin' : profile?.role === 'head_operacional' ? 'Head Comercial' : 'BDR';
+  const nameDisplay = profile?.display_name ? ` ${profile.display_name.split(' ')[0]}` : '';
+  const greetingText = `${getGreeting().replace(' 👋', '')}${nameDisplay} (${roleDisplay}) 👋`;
+
   return (
     <DashboardLayout>
       <motion.div
@@ -217,7 +227,7 @@ const Index = () => {
             setSelectedMonth={setSelectedMonth}
             customRange={customRange}
             setCustomRange={setCustomRange}
-            title={getGreeting()}
+            title={greetingText}
             subtitle="Painel de operações ativo — Rataria AI"
             icon={<LayoutDashboard className="h-6 w-6 text-primary" />}
           />
