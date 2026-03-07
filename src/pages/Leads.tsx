@@ -459,28 +459,36 @@ export default function Leads() {
 
     setLoading(true);
 
-    // Agora o CRM é compartilhado: todos os usuários veem todos os leads
-    let query = supabase.from("leads").select("*");
-
-    const { data, error } = await query.order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Erro Supabase:", error);
-      toast.error(`Erro ao carregar leads: ${error.message}`);
-      setLeads([]);
-    } else {
-      setLeads(data || []);
-    }
-
-    // Fetch profiles - non-blocking
     try {
-      const { data: profilesData } = await supabase.from("profiles").select("user_id, display_name, email");
-      if (profilesData) setProfiles(profilesData);
-    } catch (e) {
-      console.error("Erro perfis:", e);
+      // Agora o CRM é compartilhado: todos os usuários veem todos os leads
+      const { data, error } = await supabase
+        .from("leads")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Erro Supabase:", error);
+        toast.error(`Erro ao carregar leads: ${error.message}`);
+        setLeads([]);
+      } else {
+        setLeads(data || []);
+      }
+    } catch (err) {
+      console.error("Erro inesperado ao carregar leads:", err);
+      setLeads([]);
+    } finally {
+      // Always stop loading, regardless of what happens
+      setLoading(false);
     }
 
-    setLoading(false);
+    // Fetch profiles separately (non-blocking, fire-and-forget)
+    supabase
+      .from("profiles")
+      .select("user_id, display_name, email")
+      .then(({ data: profilesData }) => {
+        if (profilesData) setProfiles(profilesData);
+      })
+      .catch((e) => console.error("Erro perfis:", e));
   };
 
   useEffect(() => { fetchLeads(); }, [user, isAdmin]);
