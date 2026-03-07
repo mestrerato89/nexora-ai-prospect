@@ -38,7 +38,9 @@ export interface DashboardData {
   overdueFollowUps: number;
   topNiches: { niche: string; count: number }[];
   followUpsList: { id: string; title: string; due_date: string; lead_id: string | null; completed: boolean }[];
-  leadsByDay: { date: string; count: number }[];
+  salesByDay: { date: string; count: number }[];
+  revenue: number;
+  pipelineValue: number;
 }
 
 const Index = () => {
@@ -47,7 +49,8 @@ const Index = () => {
     totalLeads: 0, leadsQuentes: 0, contatados: 0, pagos: 0, perdidos: 0,
     novos: 0, proposta: 0,
     withPhone: 0, withWebsite: 0, avgRating: "—", pendingFollowUps: 0,
-    overdueFollowUps: 0, topNiches: [], followUpsList: [], leadsByDay: [],
+    overdueFollowUps: 0, topNiches: [], followUpsList: [], salesByDay: [],
+    revenue: 0, pipelineValue: 0,
   });
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().substring(0, 7));
   const [viewMode, setViewMode] = useState<'month' | 'year' | 'range'>('month');
@@ -77,22 +80,25 @@ const Index = () => {
         end.setHours(23, 59, 59, 999);
       }
 
-      const [leadsRes, followUpsRes] = await Promise.all([
+      const [leadsRes, followUpsRes, paymentsRes] = await Promise.all([
         supabase.from("leads")
           .select("*")
-          .eq("user_id", user.id)
-          .gte("created_at", start.toISOString())
-          .lt("created_at", end.toISOString()),
+          .eq("user_id", user.id),
         supabase.from("follow_ups")
           .select("*")
           .eq("user_id", user.id)
           .eq("completed", false)
           .order("due_date", { ascending: true })
           .limit(10),
+        supabase.from("payments")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("status", "aprovado")
       ]);
 
       const leads = leadsRes.data || [];
       const followUps = followUpsRes.data || [];
+      const payments = paymentsRes.data || [];
       const now = new Date();
 
       const nicheMap: Record<string, number> = {};
@@ -107,8 +113,12 @@ const Index = () => {
         ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)
         : "—";
 
-      // Leads chart data based on period
+      // Chart data: Only APPROVED payments in the specific period
       const dayMap: Record<string, number> = {};
+      const filteredPayments = payments.filter(p => {
+        const pDate = new Date(p.created_at);
+        return pDate >= start && pDate <= end;
+      });
 
       if (viewMode === 'month') {
         const days = eachDayOfInterval({
@@ -118,8 +128,8 @@ const Index = () => {
         days.forEach(d => {
           dayMap[formatDate(d, 'yyyy-MM-dd')] = 0;
         });
-        leads.forEach((l) => {
-          const day = l.created_at.slice(0, 10);
+        filteredPayments.forEach((p) => {
+          const day = p.created_at.slice(0, 10);
           if (dayMap[day] !== undefined) dayMap[day]++;
         });
       } else if (viewMode === 'year') {
@@ -130,28 +140,25 @@ const Index = () => {
         months.forEach(m => {
           dayMap[formatDate(m, 'yyyy-MM')] = 0;
         });
-        leads.forEach((l) => {
-          const month = l.created_at.slice(0, 7);
+        filteredPayments.forEach((p) => {
+          const month = p.created_at.slice(0, 7);
           if (dayMap[month] !== undefined) dayMap[month]++;
         });
       } else {
-        // Range mode: show daily
-        const days = eachDayOfInterval({
-          start: start,
-          end: end
-        });
-        // Limit to reasonable number of ticks if range is huge
+        const days = eachDayOfInterval({ start, end });
         days.forEach(d => {
           dayMap[formatDate(d, 'yyyy-MM-dd')] = 0;
         });
-        leads.forEach((l) => {
-          const day = l.created_at.slice(0, 10);
+        filteredPayments.forEach((p) => {
+          const day = p.created_at.slice(0, 10);
           if (dayMap[day] !== undefined) dayMap[day]++;
         });
       }
 
-      const leadsByDay = Object.entries(dayMap).map(([date, count]) => ({ date, count }));
+      const salesByDay = Object.entries(dayMap).map(([date, count]) => ({ date, count }));
 
+      const revenue = filteredPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+      const pipelineValue = leads.filter(l => l.status === 'negociando').length * 1500; // Estimated ticket
       const novos = leads.filter((l) => l.status === "novo").length;
       const negociando = leads.filter((l) => l.status === "negociando").length;
 
@@ -169,7 +176,9 @@ const Index = () => {
         overdueFollowUps: followUps.filter((f) => new Date(f.due_date) < now).length,
         topNiches,
         followUpsList: followUps.map((f) => ({ id: f.id, title: f.title, due_date: f.due_date, lead_id: f.lead_id, completed: f.completed })),
-        leadsByDay,
+        salesByDay,
+        revenue,
+        pipelineValue,
       });
       setLoading(false);
     };
@@ -216,7 +225,7 @@ const Index = () => {
         {/* Main grid: chart + pipeline + ranking */}
         <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
           <div className="xl:col-span-2">
-            <PerformanceChart data={data.leadsByDay} />
+            <PerformanceChart data={data.salesByDay} viewMode={viewMode} />
           </div>
           <div className="xl:col-span-1">
             <PipelineFunnel data={data} />

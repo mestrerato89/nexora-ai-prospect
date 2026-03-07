@@ -46,8 +46,8 @@ export function StatsRow({ data }: { data: DashboardData }) {
     { icon: Flame, label: "Leads Quentes", value: String(data.leadsQuentes) },
     { icon: Clock, label: "Contatados", value: String(data.contatados) },
     { icon: UserCheck, label: "Pagos", value: String(data.pagos) },
-    { icon: TrendingUp, label: "Pipeline", value: `R$0k` },
-    { icon: Star, label: "Prev. Receita", value: `R$0k` },
+    { icon: TrendingUp, label: "Pipeline", value: `R$ ${(data.pipelineValue / 1000).toFixed(1)}k` },
+    { icon: Star, label: "Receita", value: `R$ ${(data.revenue / 1000).toFixed(1)}k` },
   ];
 
   return (
