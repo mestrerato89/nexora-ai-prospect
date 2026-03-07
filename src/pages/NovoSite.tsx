@@ -81,7 +81,6 @@ export default function NovoSite() {
   const [genStep, setGenStep] = useState("");
   const [saving, setSaving] = useState(false);
   const [nicheFilter, setNicheFilter] = useState("");
-  const [nicheFilter, setNicheFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("todos");
 
   // Premium Mode State
@@ -96,7 +95,6 @@ export default function NovoSite() {
     setSections(n.sections);
     setSiteName("");
     setDescription("");
-    setStep(1);
     setStep(1);
   };
 
@@ -343,8 +341,8 @@ A interface inteira usa base neutra + a cor primária da marca. Nenhuma outra co
           {stepLabels.map((label, i) => (
             <div key={i} className="flex items-center gap-2 flex-1">
               <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${i < step ? "bg-primary text-primary-foreground" :
-                  i === step ? "bg-primary text-primary-foreground ring-2 ring-primary/30" :
-                    "bg-secondary text-muted-foreground"
+                i === step ? "bg-primary text-primary-foreground ring-2 ring-primary/30" :
+                  "bg-secondary text-muted-foreground"
                 }`}>
                 {i < step ? <Check className="h-4 w-4" /> : i + 1}
               </div>
@@ -373,8 +371,8 @@ A interface inteira usa base neutra + a cor primária da marca. Nenhuma outra co
                       key={cat.id}
                       onClick={() => setCategoryFilter(cat.id)}
                       className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${isActive
-                          ? "bg-primary text-primary-foreground shadow-md"
-                          : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 border border-border"
+                        ? "bg-primary text-primary-foreground shadow-md"
+                        : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-secondary/80 border border-border"
                         }`}
                     >
                       <Icon className="h-4 w-4" />
