@@ -136,8 +136,8 @@ export function BdrRanking() {
                                             className={`h-full rounded-full ${idx === 0 ? 'bg-primary' : 'bg-primary/50'}`}
                                         />
                                     </div>
-                                    <span className="font-mono text-[10px] font-bold text-foreground w-[60px] text-right">
-                                        R${(bdr.totalSalesVolume / 1000).toFixed(1)}k
+                                    <span className="font-mono text-[11px] font-bold text-foreground shrink-0">
+                                        R$ {bdr.totalSalesVolume.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                     </span>
                                 </div>
                             </motion.div>

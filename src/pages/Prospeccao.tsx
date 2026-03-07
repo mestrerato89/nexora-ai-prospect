@@ -2,7 +2,7 @@ import { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Crosshair, Search, Loader2, Save, Wifi, ShieldCheck } from "lucide-react";
+import { Crosshair, Search, Loader2, Save, Wifi, ShieldCheck, MapPin, Instagram, Facebook, ShoppingBag, Sparkles, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -11,13 +11,25 @@ import { SearchFilters } from "@/components/prospeccao/SearchFilters";
 import { ProspectCard } from "@/components/prospeccao/ProspectCard";
 import { searchProspects, type ProspectResult, type SearchSource } from "@/lib/api/prospect";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 
 type SearchStatus = "idle" | "searching" | "enriching" | "done" | "error";
+type ProspectionSource = "google_maps" | "instagram" | "facebook" | "marketplace" | "enriquecer" | "validar";
+
+const sourceTabs: { id: ProspectionSource; label: string; sublabel: string; icon: any; active: boolean }[] = [
+  { id: "google_maps", label: "Leads Locais", sublabel: "Google Maps", icon: MapPin, active: true },
+  { id: "instagram", label: "Instagram", sublabel: "Hashtag/Local", icon: Instagram, active: false },
+  { id: "facebook", label: "Facebook", sublabel: "Páginas/Negócios", icon: Facebook, active: false },
+  { id: "marketplace", label: "Marketplace", sublabel: "Em breve", icon: ShoppingBag, active: false },
+  { id: "enriquecer", label: "Enriquecer", sublabel: "Site → Email", icon: Sparkles, active: false },
+  { id: "validar", label: "Validar", sublabel: "Limpar base", icon: CheckCircle, active: false },
+];
 
 export default function Prospeccao() {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const [activeSource, setActiveSource] = useState<ProspectionSource>("google_maps");
   const [niche, setNiche] = useState(searchParams.get("niche") || "");
   const [location, setLocation] = useState(searchParams.get("city") || "");
   const [maxResults, setMaxResults] = useState("20");
@@ -78,7 +90,7 @@ export default function Prospeccao() {
   const saveLead = async (result: ProspectResult) => {
 
     const { error } = await supabase.from("leads").insert({
-      user_id: null, // Salva sem perfil para que qualquer um possa "pegar"
+      user_id: null,
       status: "novo",
       name: result.name, address: result.address,
       phone: result.phone || null, website: result.website || null,
@@ -129,77 +141,107 @@ export default function Prospeccao() {
     <DashboardLayout>
       <div className="space-y-6 max-w-[1400px]">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Crosshair className="h-6 w-6 text-primary" /> Prospecção Inteligente
+          <h1 className="text-xl font-mono font-bold text-foreground flex items-center gap-2">
+            <Crosshair className="h-5 w-5 text-primary" /> Encontrar Empresas
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Encontre empresas por nicho e localização para prospecção comercial
-          </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <SearchFilters
-            niche={niche} location={location} maxResults={maxResults} minRating={minRating}
-            loading={loading} onNicheChange={setNiche} onLocationChange={setLocation}
-            onMaxResultsChange={setMaxResults} onMinRatingChange={setMinRating} onSubmit={handleSearch}
-          />
+        {/* Source Tabs */}
+        <div className="flex items-center gap-1 overflow-x-auto pb-1">
+          {sourceTabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => {
+                if (tab.active) setActiveSource(tab.id);
+                else toast.info(`${tab.label} — Em breve!`);
+              }}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-kanban text-left transition-all shrink-0 border ${activeSource === tab.id
+                ? 'bg-primary text-primary-foreground border-primary'
+                : tab.active
+                  ? 'bg-card border-primary/5 hover:border-primary/20 text-muted-foreground hover:text-foreground'
+                  : 'bg-card/50 border-primary/5 text-muted-foreground/50 cursor-default'
+                }`}
+            >
+              <tab.icon className="h-4 w-4 shrink-0" />
+              <div>
+                <p className={`text-xs font-semibold leading-tight ${activeSource === tab.id ? '' : ''}`}>{tab.label}</p>
+                <p className={`text-[9px] font-mono leading-tight ${activeSource === tab.id ? 'text-primary-foreground/70' : 'text-muted-foreground/60'}`}>{tab.sublabel}</p>
+              </div>
+            </button>
+          ))}
+        </div>
 
-          <div className="lg:col-span-2 space-y-4">
-            {loading && (
-              <div className="bg-card rounded-xl border border-border p-6 space-y-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                  {statusLabel}
+        {/* Content based on active tab */}
+        {activeSource === "google_maps" ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <SearchFilters
+              niche={niche} location={location} maxResults={maxResults} minRating={minRating}
+              loading={loading} onNicheChange={setNiche} onLocationChange={setLocation}
+              onMaxResultsChange={setMaxResults} onMinRatingChange={setMinRating} onSubmit={handleSearch}
+            />
+
+            <div className="lg:col-span-2 space-y-4">
+              {loading && (
+                <div className="bg-card rounded-xl border border-border p-6 space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    {statusLabel}
+                  </div>
+                  <Progress value={progress} className="h-2" />
+                  {results.length > 0 && (
+                    <p className="text-xs text-muted-foreground">{results.length} resultados parciais</p>
+                  )}
                 </div>
-                <Progress value={progress} className="h-2" />
-                {results.length > 0 && (
-                  <p className="text-xs text-muted-foreground">{results.length} resultados parciais</p>
-                )}
-              </div>
-            )}
+              )}
 
-            {sourceInfo && status === "done" && (
-              <div className={`flex items-center gap-2 text-sm ${sourceInfo.className}`}>
-                <sourceInfo.icon className="h-4 w-4" />
-                {sourceInfo.label}
-              </div>
-            )}
+              {sourceInfo && status === "done" && (
+                <div className={`flex items-center gap-2 text-sm ${sourceInfo.className}`}>
+                  <sourceInfo.icon className="h-4 w-4" />
+                  {sourceInfo.label}
+                </div>
+              )}
 
-            {results.length > 0 && (
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">
-                  {results.length} resultados • Score médio: {Math.round(results.reduce((a, r) => a + r.score, 0) / results.length)}
-                </p>
-                <Button variant="outline" size="sm" className="gap-2 border-border" onClick={saveAll}>
-                  <Save className="h-3.5 w-3.5" /> Salvar Todos
-                </Button>
-              </div>
-            )}
-
-            <AnimatePresence>
-              {results.length === 0 && !loading && status !== "error" && (
-                <div className="bg-card rounded-xl border border-border p-12 text-center">
-                  <Search className="h-14 w-14 text-muted-foreground/30 mx-auto mb-4" />
-                  <h3 className="font-semibold text-foreground mb-1">Selecione nicho e cidade</h3>
+              {results.length > 0 && (
+                <div className="flex items-center justify-between">
                   <p className="text-sm text-muted-foreground">
-                    Preencha os filtros e clique em buscar para encontrar empresas
+                    {results.length} resultados • Score médio: {Math.round(results.reduce((a, r) => a + r.score, 0) / results.length)}
                   </p>
+                  <Button variant="outline" size="sm" className="gap-2 border-border" onClick={saveAll}>
+                    <Save className="h-3.5 w-3.5" /> Salvar Todos
+                  </Button>
                 </div>
               )}
 
-              {status === "error" && results.length === 0 && (
-                <div className="bg-card rounded-xl border border-destructive/30 p-12 text-center">
-                  <h3 className="font-semibold text-destructive mb-1">Erro na busca</h3>
-                  <p className="text-sm text-muted-foreground">Tente novamente em alguns instantes</p>
-                </div>
-              )}
+              <AnimatePresence>
+                {results.length === 0 && !loading && status !== "error" && (
+                  <div className="bg-card rounded-xl border border-border p-12 text-center">
+                    <Search className="h-14 w-14 text-muted-foreground/30 mx-auto mb-4" />
+                    <h3 className="font-semibold text-foreground mb-1">Selecione nicho e cidade</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Preencha os filtros e clique em buscar para encontrar empresas
+                    </p>
+                  </div>
+                )}
 
-              {results.map((r) => (
-                <ProspectCard key={r.id} result={r} saved={saved.has(r.id)} canSave={!!user} onSave={() => saveLead(r)} />
-              ))}
-            </AnimatePresence>
+                {status === "error" && results.length === 0 && (
+                  <div className="bg-card rounded-xl border border-destructive/30 p-12 text-center">
+                    <h3 className="font-semibold text-destructive mb-1">Erro na busca</h3>
+                    <p className="text-sm text-muted-foreground">Tente novamente em alguns instantes</p>
+                  </div>
+                )}
+
+                {results.map((r) => (
+                  <ProspectCard key={r.id} result={r} saved={saved.has(r.id)} canSave={!!user} onSave={() => saveLead(r)} />
+                ))}
+              </AnimatePresence>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="bg-card rounded-xl border border-border p-20 text-center">
+            <h3 className="font-mono font-bold text-foreground uppercase tracking-widest mb-2">Módulo em Desenvolvimento</h3>
+            <p className="text-sm text-muted-foreground">Esta fonte de prospecção estará disponível em breve na sua estação.</p>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

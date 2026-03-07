@@ -20,16 +20,14 @@ type Lead = Tables<"leads">;
 const statusConfig = {
   novo: { label: "Novo", color: "bg-blue-500/20 text-blue-500", kanbanColor: "border-l-blue-500" },
   contatado: { label: "Contatado", color: "bg-purple-500/20 text-purple-500", kanbanColor: "border-l-purple-500" },
-  agendado: { label: "Agendado", color: "bg-indigo-500/20 text-indigo-500", kanbanColor: "border-l-indigo-500" },
-  reuniao: { label: "Reunião", color: "bg-amber-500/20 text-amber-500", kanbanColor: "border-l-amber-500" },
-  proposta: { label: "Proposta", color: "bg-orange-500/20 text-orange-500", kanbanColor: "border-l-orange-500" },
+  negociando: { label: "Negociando", color: "bg-primary/20 text-primary", kanbanColor: "border-l-primary" },
   pago: { label: "Pago", color: "bg-emerald-500/20 text-emerald-500", kanbanColor: "border-l-emerald-500" },
   remarketing: { label: "Remarketing", color: "bg-pink-500/20 text-pink-500", kanbanColor: "border-l-pink-500" },
   perdido: { label: "Perdido", color: "bg-destructive/20 text-destructive", kanbanColor: "border-l-destructive" },
 } as const;
 
 type Status = keyof typeof statusConfig;
-const STATUSES: Status[] = ["novo", "contatado", "agendado", "reuniao", "proposta", "pago", "remarketing", "perdido"];
+const STATUSES: Status[] = ["novo", "contatado", "negociando", "pago", "remarketing", "perdido"];
 
 // --- Sub-components (outside to prevent flickering) ---
 
