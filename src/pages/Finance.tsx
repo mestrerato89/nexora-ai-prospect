@@ -16,11 +16,17 @@ import {
     Receipt,
     ListFilter,
     Trash2,
+    BarChart3,
+    TrendingDown,
+    ChevronLeft,
+    ChevronRight,
+    ArrowRight,
     Calendar,
     Briefcase,
     FileText,
     Users
 } from "lucide-react";
+import { createNotification } from "@/lib/notifications";
 import {
     Tabs,
     TabsContent,
@@ -29,6 +35,7 @@ import {
 } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { LeadSelector } from "@/components/LeadSelector";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -93,6 +100,7 @@ const Finance = () => {
     const [expenses, setExpenses] = useState<Expense[]>([]);
     const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
     const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().substring(0, 7)); // YYYY-MM format
+    const [viewMode, setViewMode] = useState<'month' | 'year'>('month');
 
     // Form States
     const [newPayment, setNewPayment] = useState({ leadId: "", amount: 0 });
@@ -155,15 +163,21 @@ const Finance = () => {
         }
     }, [isAdmin, loading, navigate]);
 
-    // Financial Calculations (Filtered by Month)
+    // Financial Calculations (Filtered by Month or Year)
     const filteredPayments = payments.filter(p => {
         const pDate = new Date(p.created_at);
+        if (viewMode === 'year') {
+            return pDate.getFullYear().toString() === selectedMonth.split('-')[0];
+        }
         const pMonth = `${pDate.getFullYear()}-${String(pDate.getMonth() + 1).padStart(2, '0')}`;
         return pMonth === selectedMonth;
     });
 
     const filteredExpenses = expenses.filter(e => {
         const eDate = new Date(e.date);
+        if (viewMode === 'year') {
+            return eDate.getFullYear().toString() === selectedMonth.split('-')[0];
+        }
         const eMonth = `${eDate.getFullYear()}-${String(eDate.getMonth() + 1).padStart(2, '0')}`;
         return eMonth === selectedMonth;
     });
@@ -171,17 +185,52 @@ const Finance = () => {
     const approvedPayments = filteredPayments.filter(p => p.status === 'aprovado');
     const totalSalesPaid = approvedPayments.reduce((acc, curr) => acc + curr.amount, 0);
 
-    const activeSubs = subscriptions.filter(s => {
-        if (s.status !== 'ativo') return false;
+    const currentMonthStr = new Date().toISOString().substring(0, 7);
 
-        // Ensure we only count the recurrence if we are looking at a month equal to or AFTER it started
+    // Sistema de Faturas Mensais (Estilo Cartão de Crédito)
+    const faturasDoMes = subscriptions.map(s => {
         const sMonth = s.start_date ? s.start_date.substring(0, 7) : s.created_at.substring(0, 7);
-        return selectedMonth >= sMonth;
-    });
+        // Não gerar fatura de cobrança para meses anteriores ao início da assinatura
+        if (selectedMonth < sMonth) return null;
+
+        // Procura pagamentos deste lead neste mesmo mês selecionado
+        const leadPaymentsThisMonth = filteredPayments.filter(p => p.lead_id === s.lead_id);
+        const paymentFound = leadPaymentsThisMonth.find(p => p.amount === s.amount) || leadPaymentsThisMonth[0];
+
+        let faturaStatus = 'pendente';
+        if (paymentFound) {
+            faturaStatus = paymentFound.status === 'aprovado' ? 'pago' : 'analise';
+        } else if (selectedMonth < currentMonthStr) {
+            faturaStatus = 'atrasado';
+        } else {
+            faturaStatus = 'aberto';
+        }
+
+        if (s.status === 'cancelado' && !paymentFound) {
+            // Só exibe no histórico de meses anteriores, some nos meses futuros/atuais
+            if (selectedMonth >= currentMonthStr) return null;
+            faturaStatus = 'cancelado_historico';
+        }
+
+        return {
+            subscription: s,
+            payment: paymentFound,
+            status: faturaStatus
+        };
+    }).filter(f => f !== null) as any[];
+
+    // MRR Teórico Ativo
+    const activeSubs = subscriptions.filter(s => s.status === 'ativo' && selectedMonth >= (s.start_date?.substring(0, 7) || s.created_at.substring(0, 7)));
     const totalRecurring = activeSubs.reduce((acc, curr) => acc + curr.amount, 0);
 
-    // Total revenue in the month = Setup/Single Sales in the month + CURRENT MRR (since MRR is paid every month)
-    const totalRevenue = totalSalesPaid + totalRecurring;
+    // Faturas efetivamente pagas neste mês
+    const totalRecurringPaid = faturasDoMes.filter(f => f.status === 'pago').reduce((acc, curr) => acc + (curr.payment?.amount || curr.subscription.amount), 0);
+    // Vendas Únicas pagas (removemos pagamentos que já foram classificados como fatura pra não duplicar)
+    const faturaPaymentIds = faturasDoMes.map(f => f.payment?.id).filter(Boolean);
+    const avulsoSalesPaid = approvedPayments.filter(p => !faturaPaymentIds.includes(p.id)).reduce((acc, curr) => acc + curr.amount, 0);
+
+    // Total revenue in the month = Vendas Únicas + Faturas Pagas
+    const totalRevenue = avulsoSalesPaid + totalRecurringPaid;
 
     const totalFixed = filteredExpenses.filter(e => e.type === 'fixo').reduce((acc, curr) => acc + curr.amount, 0);
     const totalVariable = filteredExpenses.filter(e => e.type === 'variavel').reduce((acc, curr) => acc + curr.amount, 0);
@@ -242,6 +291,15 @@ const Finance = () => {
 
         setNewPayment({ leadId: "", amount: 0 });
         toast.success("Recebimento registrado e aguardando aprovação!");
+
+        // Notify admin about new payment (simulated, usually we'd notify specific roles)
+        await createNotification(
+            user.id,
+            "Pagamento Registrado",
+            `Um novo pagamento de R$ ${newPayment.amount} foi registrado para o lead ${leads.find(l => l.id === newPayment.leadId)?.name}.`,
+            'payment'
+        );
+
         fetchData();
     };
 
@@ -268,6 +326,32 @@ const Finance = () => {
         fetchData();
     };
 
+    const handlePayFatura = async (fatura: any) => {
+        if (!user) return;
+
+        const invoiceDate = selectedMonth === currentMonthStr
+            ? new Date().toISOString()
+            : new Date(`${selectedMonth}-10T12:00:00Z`).toISOString();
+
+        const { error } = await supabase.from('payments').insert({
+            lead_id: fatura.subscription.lead_id,
+            amount: fatura.subscription.amount,
+            status: 'pendente',
+            include_head: true,
+            include_bdr: true,
+            user_id: user.id,
+            created_at: invoiceDate
+        });
+
+        if (error) {
+            toast.error("Erro ao gerar pagamento da fatura: " + error.message);
+            return;
+        }
+
+        toast.success("Pagamento de fatura registrado e aguardando aprovação!");
+        fetchData();
+    };
+
     const approvePayment = async (id: string) => {
         const { error } = await supabase.from('payments')
             .update({ status: 'aprovado', approved_at: new Date().toISOString() })
@@ -276,6 +360,16 @@ const Finance = () => {
         if (error) {
             toast.error("Erro ao aprovar: " + error.message);
             return;
+        }
+
+        const payment = payments.find(p => p.id === id);
+        if (payment && user) {
+            await createNotification(
+                payment.user_id,
+                "Pagamento Aprovado! ✅",
+                `Seu lançamento de R$ ${payment.amount} para ${payment.lead_name} foi aprovado com sucesso.`,
+                'payment'
+            );
         }
 
         toast.success("Pagamento aprovado!");
@@ -300,6 +394,16 @@ const Finance = () => {
 
         setNewExpense({ type: 'fixo', name: "", description: "", amount: 0 });
         toast.success("Gasto registrado!");
+
+        if (user) {
+            await createNotification(
+                user.id,
+                "Gasto Adicionado",
+                `Um novo gasto de R$ ${newExpense.amount} (${newExpense.name}) foi registrado no sistema.`,
+                'system'
+            );
+        }
+
         fetchData();
     };
 
@@ -320,6 +424,17 @@ const Finance = () => {
         if (error) toast.error("Erro ao atualizar: " + error.message);
         else {
             toast.success(`Recorrência ${newStatus}!`);
+
+            if (user) {
+                const sub = subscriptions.find(s => s.id === id);
+                await createNotification(
+                    user.id,
+                    `Assinatura ${newStatus === 'ativo' ? 'Ativada' : 'Suspensa'}`,
+                    `A recorrência do lead ${(sub as any)?.leads?.name || '---'} agora está ${newStatus}.`,
+                    'payment'
+                );
+            }
+
             fetchData();
         }
     };
@@ -331,43 +446,124 @@ const Finance = () => {
         visible: { opacity: 1, y: 0 },
     };
 
+    const changeMonth = (offset: number) => {
+        const date = new Date(selectedMonth + "-01");
+        if (viewMode === 'month') {
+            date.setMonth(date.getMonth() + offset);
+        } else {
+            date.setFullYear(date.getFullYear() + offset);
+        }
+        setSelectedMonth(date.toISOString().substring(0, 7));
+    };
+
+    const formatSelectedDate = () => {
+        const date = new Date(selectedMonth + "-15");
+        if (viewMode === 'year') {
+            return `Ano de ${date.getFullYear()}`;
+        }
+        return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    };
+
     return (
         <DashboardLayout>
             <div className="space-y-6 max-w-7xl mx-auto">
-                <motion.div initial="hidden" animate="visible" variants={itemVariants} className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
-                    <div>
-                        <h2 className="text-xl font-mono font-bold tracking-tight text-foreground flex items-center gap-3">
-                            <DollarSign className="h-5 w-5 text-primary" />
-                            Gestão Financeira
-                        </h2>
-                        <p className="text-muted-foreground mt-1 text-[10px] font-mono uppercase tracking-[0.15em]">Controle de faturamento e distribuição de lucros</p>
-                    </div>
+                <motion.div initial="hidden" animate="visible" variants={itemVariants} className="relative mb-6">
+                    {/* Compact Glassmorphism Header */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 rounded-[2rem] blur-2xl -z-10" />
+                    <div className="bg-card/40 backdrop-blur-xl border border-primary/10 rounded-[2rem] p-4 lg:p-6 flex flex-col lg:flex-row items-center justify-between gap-6 shadow-xl shadow-primary/5">
 
-                    <div className="flex bg-muted/30 p-1 rounded-2xl border border-primary/5">
-                        <div className="px-4 py-2 border-r border-primary/5 flex items-center justify-center">
-                            <Input
-                                type="month"
-                                value={selectedMonth}
-                                onChange={(e) => setSelectedMonth(e.target.value)}
-                                className="h-8 bg-transparent border-0 text-sm font-black w-auto p-0 cursor-pointer text-center"
-                            />
+                        <div className="flex items-center gap-4">
+                            <div className="h-12 w-12 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20 shadow-inner shrink-0">
+                                <DollarSign className="h-6 w-6 text-primary" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-black tracking-tight text-foreground flex items-center gap-2">
+                                    Gestão Financeira
+                                    <Badge className="bg-primary/20 text-primary border-0 text-[8px] font-black uppercase px-2 py-0 h-4">PRO</Badge>
+                                </h2>
+                                <p className="text-muted-foreground text-[9px] font-bold uppercase tracking-widest opacity-60 line-clamp-1">Faturamento & Governança de Lucro</p>
+                            </div>
                         </div>
-                        <div className="px-4 py-2 text-center border-r border-primary/5">
-                            <p className="text-[9px] font-mono font-bold uppercase text-muted-foreground tracking-[0.2em]">Saldo Líquido</p>
-                            <p className="text-lg font-mono font-black text-primary">R$ {netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                        </div>
-                        <div className="px-4 py-2 text-center">
-                            <p className="text-[9px] font-mono font-bold uppercase text-muted-foreground tracking-[0.2em]">Meta Mensal</p>
-                            <p className="text-lg font-mono font-black text-foreground">85%</p>
+
+                        <div className="flex flex-col md:flex-row items-center gap-3 bg-muted/30 p-1.5 rounded-3xl border border-primary/5">
+                            <div className="flex p-1 bg-background/40 rounded-2xl border border-primary/5 shadow-inner">
+                                <button
+                                    onClick={() => setViewMode('month')}
+                                    className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${viewMode === 'month' ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20' : 'text-muted-foreground hover:text-foreground'}`}
+                                >
+                                    Mês
+                                </button>
+                                <button
+                                    onClick={() => setViewMode('year')}
+                                    className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${viewMode === 'year' ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20' : 'text-muted-foreground hover:text-foreground'}`}
+                                >
+                                    Ano
+                                </button>
+                            </div>
+
+                            <div className="h-6 w-[1px] bg-primary/10 hidden md:block mx-1" />
+
+                            <div className="flex items-center gap-3 px-2">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => changeMonth(-1)}
+                                    className="h-8 w-8 rounded-full hover:bg-primary/10 text-primary transition-all active:scale-90"
+                                >
+                                    <ChevronLeft className="h-5 w-5" />
+                                </Button>
+
+                                <div className="relative group text-center min-w-[140px]">
+                                    <span className="block text-sm font-black uppercase tracking-tight text-foreground transition-all group-hover:text-primary cursor-default whitespace-nowrap">
+                                        {formatSelectedDate()}
+                                    </span>
+                                    <input
+                                        type={viewMode === 'month' ? "month" : "number"}
+                                        value={viewMode === 'month' ? selectedMonth : selectedMonth.split('-')[0]}
+                                        onChange={(e) => {
+                                            if (viewMode === 'year') {
+                                                setSelectedMonth(`${e.target.value}-01`);
+                                            } else {
+                                                setSelectedMonth(e.target.value);
+                                            }
+                                        }}
+                                        className="absolute inset-0 opacity-0 cursor-pointer"
+                                    />
+                                    <p className="text-[8px] font-mono font-black uppercase text-primary/60 tracking-tighter flex items-center justify-center gap-1 opacity-60">
+                                        Alterar Período <Calendar className="h-2 w-2" />
+                                    </p>
+                                </div>
+
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => changeMonth(1)}
+                                    className="h-8 w-8 rounded-full hover:bg-primary/10 text-primary transition-all active:scale-90"
+                                >
+                                    <ChevronRight className="h-5 w-5" />
+                                </Button>
+                            </div>
+
+                            <div className="px-5 py-2.5 bg-primary/10 rounded-2xl hidden lg:flex flex-col justify-center items-center text-center min-w-[130px] border border-primary/10 shadow-inner">
+                                <p className="text-[8px] font-black text-primary/60 uppercase tracking-widest mb-0.5">Saldo Líquido</p>
+                                <p className="text-sm font-black text-primary">R$ {netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</p>
+                                <div className="w-full max-w-[80px] h-1 bg-primary/20 rounded-full mt-1.5 overflow-hidden">
+                                    <div className="h-full bg-primary" style={{ width: '85%' }} />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </motion.div>
 
                 <Tabs defaultValue="overview" className="space-y-8">
-                    <TabsList className="grid w-full grid-cols-4 max-w-[800px] h-12 bg-muted/20 p-1 border border-primary/5 rounded-2xl">
+                    <TabsList className="grid w-full grid-cols-5 max-w-[1000px] h-12 bg-muted/20 p-1 border border-primary/5 rounded-2xl">
                         <TabsTrigger value="overview" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-black uppercase tracking-widest text-[10px]">
                             <PieChart className="h-4 w-4 mr-2" />
                             Painel Principal
+                        </TabsTrigger>
+                        <TabsTrigger value="report" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-black uppercase tracking-widest text-[10px]">
+                            <BarChart3 className="h-4 w-4 mr-2" />
+                            Relatório Empresa
                         </TabsTrigger>
                         <TabsTrigger value="receivables" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-black uppercase tracking-widest text-[10px]">
                             <Receipt className="h-4 w-4 mr-2" />
@@ -573,6 +769,228 @@ const Finance = () => {
                         </motion.div>
                     </TabsContent>
 
+                    <TabsContent value="report" className="space-y-6 outline-none">
+                        <motion.div initial="hidden" animate="visible" variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <Card className="rounded-[2.5rem] border-primary/10 bg-card/40 backdrop-blur-md overflow-hidden flex flex-col">
+                                <CardHeader className="p-8 border-b border-primary/10">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-3 bg-emerald-500/10 rounded-2xl"><TrendingUp className="h-6 w-6 text-emerald-500" /></div>
+                                        <CardTitle className="text-xl font-black uppercase tracking-tighter">Performance Anual</CardTitle>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="p-8 space-y-6">
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center bg-emerald-500/5 p-4 rounded-2xl border border-emerald-500/10">
+                                            <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Entrada Total</span>
+                                            <span className="text-xl font-black text-emerald-500">R$ {totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center bg-destructive/5 p-4 rounded-2xl border border-destructive/10">
+                                            <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Saída Total</span>
+                                            <span className="text-xl font-black text-destructive">R$ -{totalExpensesAndCosts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center bg-primary/10 p-5 rounded-2xl border border-primary/20 shadow-lg shadow-primary/5">
+                                            <span className="text-xs font-black uppercase tracking-widest text-primary">Margem Final</span>
+                                            <div className="text-right">
+                                                <span className="block text-2xl font-black">R$ {netProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                <span className="text-[9px] font-bold text-primary italic uppercase tracking-tighter">Disponível para saque</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-4 bg-muted/20 rounded-2xl border border-dashed border-border">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <PieChart className="h-3 w-3 text-primary" />
+                                            <span className="text-[9px] font-black uppercase tracking-widest">Saúde Financeira</span>
+                                        </div>
+                                        <div className="h-2 w-full bg-background rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-primary"
+                                                style={{ width: `${Math.min((netProfit / (totalRevenue || 1)) * 100, 100)}%` }}
+                                            />
+                                        </div>
+                                        <p className="text-[8px] mt-2 opacity-50 font-medium">Margem de lucro atual: {((netProfit / (totalRevenue || 1)) * 100).toFixed(1)}%</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="rounded-[2.5rem] border-primary/10 bg-card/40 backdrop-blur-md overflow-hidden flex flex-col lg:col-span-2">
+                                <CardHeader className="p-8 border-b border-primary/10 flex flex-row items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-3 bg-primary/10 rounded-2xl"><PieChart className="h-6 w-6 text-primary" /></div>
+                                        <CardTitle className="text-xl font-black uppercase tracking-tighter">Composição de Custos</CardTitle>
+                                    </div>
+                                    <Badge variant="outline" className="border-primary/20 text-[10px] uppercase font-black px-3 py-1">Análise Proporcional</Badge>
+                                </CardHeader>
+                                <CardContent className="p-8 flex flex-col md:flex-row gap-8 items-center justify-center">
+                                    <div className="relative w-48 h-48 flex items-center justify-center">
+                                        {/* Creative SVG Gauge representation */}
+                                        <svg className="w-full h-full transform -rotate-90">
+                                            <circle cx="96" cy="96" r="80" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-muted/10" />
+                                            <circle
+                                                cx="96" cy="96" r="80" stroke="currentColor" strokeWidth="12" fill="transparent"
+                                                strokeDasharray={2 * Math.PI * 80}
+                                                strokeDashoffset={(2 * Math.PI * 80) * (1 - (totalFixed / (totalExpensesAndCosts || 1)))}
+                                                className="text-destructive transition-all duration-1000"
+                                            />
+                                            <circle
+                                                cx="96" cy="96" r="60" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-muted/10"
+                                            />
+                                            <circle
+                                                cx="96" cy="96" r="60" stroke="currentColor" strokeWidth="12" fill="transparent"
+                                                strokeDasharray={2 * Math.PI * 60}
+                                                strokeDashoffset={(2 * Math.PI * 60) * (1 - (totalVariable / (totalExpensesAndCosts || 1)))}
+                                                className="text-amber-500 transition-all duration-1000"
+                                            />
+                                        </svg>
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none transform rotate-0">
+                                            <span className="text-[10px] font-black uppercase opacity-40">Custos</span>
+                                            <span className="text-2xl font-black">100%</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex-1 space-y-4 w-full">
+                                        <div className="p-5 bg-background/50 rounded-3xl border border-border group hover:border-destructive/20 transition-all">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="h-2 w-2 rounded-full bg-destructive" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest">Comprometimento Fixo</span>
+                                                </div>
+                                                <span className="text-xs font-black text-destructive">{((totalFixed / (totalExpensesAndCosts || 1)) * 100).toFixed(0)}%</span>
+                                            </div>
+                                            <p className="text-[11px] text-muted-foreground">Gastos recorrentes que acontecem independente das vendas.</p>
+                                        </div>
+                                        <div className="p-5 bg-background/50 rounded-3xl border border-border group hover:border-amber-500/20 transition-all">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="h-2 w-2 rounded-full bg-amber-500" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest">Variáveis de Operação</span>
+                                                </div>
+                                                <span className="text-xs font-black text-amber-500">{((totalVariable / (totalExpensesAndCosts || 1)) * 100).toFixed(0)}%</span>
+                                            </div>
+                                            <p className="text-[11px] text-muted-foreground">Custos que escalam conforme o volume de novos projetos.</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                                <div className="p-8 border-t border-primary/10 bg-primary/5 mt-auto">
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-primary mb-4 flex items-center gap-2">
+                                        <Plus className="h-3 w-3" /> Lançamento Rápido de Gasto
+                                    </h4>
+                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                                        <div className="sm:col-span-2">
+                                            <Input
+                                                placeholder="Nome do gasto (ex: Servidor AWS)"
+                                                className="h-10 text-[11px] rounded-xl bg-background border-primary/10"
+                                                value={newExpense.name}
+                                                onChange={(e) => setNewExpense(prev => ({ ...prev, name: e.target.value }))}
+                                            />
+                                        </div>
+                                        <div>
+                                            <Select value={newExpense.type} onValueChange={(v: any) => setNewExpense(prev => ({ ...prev, type: v }))}>
+                                                <SelectTrigger className="h-10 text-[11px] rounded-xl bg-background border-primary/10">
+                                                    <SelectValue placeholder="Tipo" />
+                                                </SelectTrigger>
+                                                <SelectContent className="rounded-xl">
+                                                    <SelectItem value="fixo" className="text-[11px]">Fixo</SelectItem>
+                                                    <SelectItem value="variavel" className="text-[11px]">Variável</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div>
+                                            <div className="relative">
+                                                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                                <Input
+                                                    type="number"
+                                                    placeholder="0,00"
+                                                    className="h-10 pl-8 text-[11px] rounded-xl bg-background border-primary/10"
+                                                    value={newExpense.amount || ""}
+                                                    onChange={(e) => setNewExpense(prev => ({ ...prev, amount: Number(e.target.value) }))}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        onClick={handleAddExpense}
+                                        className="w-full mt-3 h-10 rounded-xl bg-destructive hover:bg-destructive/90 text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-destructive/10"
+                                    >
+                                        Registrar Saída no Caixa
+                                    </Button>
+                                </div>
+                            </Card>
+
+                            <Card className="rounded-[2.5rem] border-primary/10 bg-card/40 backdrop-blur-md overflow-hidden flex flex-col lg:col-span-3">
+                                <CardHeader className="p-8 border-b border-primary/10 flex flex-row items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-3 bg-indigo-500/10 rounded-2xl"><ShieldCheck className="h-6 w-6 text-indigo-500" /></div>
+                                        <CardTitle className="text-xl font-black uppercase tracking-tighter">Divisão de Dividendos (Real)</CardTitle>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Badge className="bg-indigo-500/10 text-indigo-500 border-0 text-[10px] font-black uppercase px-3 py-1">Payout Ratio: 100%</Badge>
+                                        <Badge variant="outline" className="border-muted-foreground/20 text-[10px] uppercase font-black px-3 py-1">Impostos: Isento</Badge>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="p-8">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                        <div className="relative group">
+                                            <div className="absolute -inset-4 bg-gradient-to-b from-primary/10 to-transparent rounded-[3rem] opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            <div className="relative space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[11px] font-black uppercase tracking-widest text-primary/60">Sócio Master</span>
+                                                    <span className="text-[10px] font-bold bg-primary/10 text-primary px-3 py-0.5 rounded-full">25%</span>
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-sm font-black text-foreground">Distribuição Head</h4>
+                                                    <p className="text-3xl font-black mt-2">R$ {headPayout.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                                </div>
+                                                <p className="text-[10px] text-muted-foreground leading-relaxed">Cálculo baseado no saldo remanescente após todos os custos diretos da operação.</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="relative group">
+                                            <div className="absolute -inset-4 bg-gradient-to-b from-emerald-500/10 to-transparent rounded-[3rem] opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            <div className="relative space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[11px] font-black uppercase tracking-widest text-emerald-500/60">Equipe BDR</span>
+                                                    <span className="text-[10px] font-bold bg-emerald-500/10 text-emerald-500 px-3 py-0.5 rounded-full">25%</span>
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-sm font-black text-foreground">Fundo de Comissões</h4>
+                                                    <p className="text-3xl font-black text-emerald-500 mt-2">R$ {bdrPayout.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                                </div>
+                                                <p className="text-[10px] text-muted-foreground leading-relaxed">Montante total a ser dividido entre os vendedores proporcionalmente ao faturamento gerado.</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="relative group">
+                                            <div className="absolute -inset-4 bg-gradient-to-b from-indigo-500/10 to-transparent rounded-[3rem] opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            <div className="relative space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[11px] font-black uppercase tracking-widest text-indigo-500/60">Reserva Empresa</span>
+                                                    <span className="text-[10px] font-bold bg-indigo-500/10 text-indigo-500 px-3 py-0.5 rounded-full">50%</span>
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-sm font-black text-foreground">Caixa de Expansão</h4>
+                                                    <p className="text-3xl font-black text-indigo-500 mt-2">R$ {companyRetention.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                                                </div>
+                                                <p className="text-[10px] text-muted-foreground leading-relaxed">Capital retido para reinvestimento em tecnologia, marketing e estrutura física.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-12 bg-primary/5 border border-primary/10 rounded-3xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-3 bg-primary/10 rounded-2xl"><BarChart3 className="h-6 w-6 text-primary" /></div>
+                                            <div>
+                                                <h4 className="text-xs font-black uppercase tracking-widest">Potencial de Escalonamento</h4>
+                                                <p className="text-[11px] text-muted-foreground">Com base no MRR atual de R$ {totalRecurring.toLocaleString('pt-BR')}, a projeção anual de faturamento é de R$ {(totalRecurring * 12).toLocaleString('pt-BR')}.</p>
+                                            </div>
+                                        </div>
+                                        <Button variant="outline" className="rounded-2xl border-primary/20 hover:bg-primary/5 font-black uppercase text-[10px] h-12 px-8">Exportar DRE Completo</Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </motion.div>
+                    </TabsContent>
+
                     <TabsContent value="receivables" className="space-y-6 outline-none">
                         <motion.div initial="hidden" animate="visible" variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             <Card className="lg:col-span-1 rounded-[2.5rem] border-primary/10 bg-card/50 overflow-hidden">
@@ -582,16 +1000,12 @@ const Finance = () => {
                                 <CardContent className="p-6 space-y-5">
                                     <div className="space-y-2">
                                         <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Lead que Pagou</Label>
-                                        <Select value={newPayment.leadId} onValueChange={(v) => setNewPayment(prev => ({ ...prev, leadId: v }))}>
-                                            <SelectTrigger className="h-12 rounded-2xl bg-background/50 border-primary/10 focus:ring-primary/20">
-                                                <SelectValue placeholder="Selecione o Lead" />
-                                            </SelectTrigger>
-                                            <SelectContent className="rounded-2xl">
-                                                {leads.map(l => (
-                                                    <SelectItem key={l.id} value={l.id} className="rounded-xl">{l.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <LeadSelector
+                                            leads={leads}
+                                            value={newPayment.leadId}
+                                            onValueChange={(v) => setNewPayment(prev => ({ ...prev, leadId: v }))}
+                                            placeholder="Pesquise o nome do cliente..."
+                                        />
                                         {newPayment.leadId && (
                                             <p className="text-[9px] text-primary font-black uppercase tracking-widest mt-1 ml-1 flex items-center gap-1.5">
                                                 <ShieldCheck className="h-3 w-3" />
@@ -739,16 +1153,13 @@ const Finance = () => {
                                 <CardContent className="p-6 space-y-5">
                                     <div className="space-y-2">
                                         <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Cliente / Projeto</Label>
-                                        <Select value={newSubscription.leadId} onValueChange={(v) => setNewSubscription(prev => ({ ...prev, leadId: v }))}>
-                                            <SelectTrigger className="h-12 rounded-2xl bg-background/50 border-indigo-500/20 focus:ring-indigo-500/50">
-                                                <SelectValue placeholder="Selecione o Cliente" />
-                                            </SelectTrigger>
-                                            <SelectContent className="rounded-2xl max-h-[200px] overflow-y-auto">
-                                                {leads.map(l => (
-                                                    <SelectItem key={l.id} value={l.id} className="rounded-xl">{l.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <LeadSelector
+                                            leads={leads}
+                                            value={newSubscription.leadId}
+                                            onValueChange={(v) => setNewSubscription(prev => ({ ...prev, leadId: v }))}
+                                            placeholder="Pesquise o nome do cliente..."
+                                            className="border-indigo-500/20"
+                                        />
                                     </div>
                                     <div className="space-y-2">
                                         <Label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground ml-1">Valor Mensal / MRR (R$)</Label>
@@ -782,44 +1193,58 @@ const Finance = () => {
                                     <TableRow className="border-indigo-500/5 hover:bg-transparent">
                                         <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 px-6">Cliente</TableHead>
                                         <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Vínculo Inicial</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Valor Mensal (R$)</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Status</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Fatura (R$)</TableHead>
+                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Status ({selectedMonth})</TableHead>
                                         <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 text-right px-6">Ações</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {subscriptions.length === 0 ? (
+                                    {faturasDoMes.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={5} className="py-20 text-center text-muted-foreground opacity-50 italic">
-                                                Nenhum cliente recorrente registrado ainda.
+                                                Nenhuma fatura de recorrência gerada para o mês selecionado.
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        subscriptions.map(s => (
-                                            <TableRow key={s.id} className="group hover:bg-indigo-500/5 border-indigo-500/5 transition-colors">
+                                        faturasDoMes.map((fatura, idx) => (
+                                            <TableRow key={fatura.subscription.id + idx} className="group hover:bg-indigo-500/5 border-indigo-500/5 transition-colors">
                                                 <TableCell className="py-6 px-6">
-                                                    <span className="font-black text-sm">{s.lead_name}</span>
+                                                    <span className="font-black text-sm">{fatura.subscription.lead_name}</span>
                                                 </TableCell>
                                                 <TableCell className="py-6">
-                                                    <span className="text-xs font-bold text-muted-foreground font-mono">{new Date(s.start_date).toLocaleDateString()}</span>
+                                                    <span className="text-xs font-bold text-muted-foreground font-mono">{new Date(fatura.subscription.start_date || fatura.subscription.created_at).toLocaleDateString()}</span>
                                                 </TableCell>
                                                 <TableCell className="py-6">
-                                                    <span className="font-black text-indigo-500">R$ {s.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / mês</span>
+                                                    <span className="font-black text-indigo-500">R$ {fatura.subscription.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                                 </TableCell>
                                                 <TableCell className="py-6">
-                                                    <Badge className={s.status === 'ativo' ? "bg-indigo-500/10 text-indigo-500 border-indigo-500/20" : "bg-destructive/10 text-destructive border-destructive/20"}>
-                                                        {s.status === 'ativo' ? 'Ativo' : 'Cancelado'}
-                                                    </Badge>
+                                                    {fatura.status === 'pago' && <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">Fatura Paga</Badge>}
+                                                    {fatura.status === 'analise' && <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20">Em Análise</Badge>}
+                                                    {fatura.status === 'aberto' && <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">Em Aberto</Badge>}
+                                                    {fatura.status === 'pendente' && <Badge className="bg-indigo-500/10 text-indigo-500 border-indigo-500/20">Pendente</Badge>}
+                                                    {fatura.status === 'atrasado' && <Badge className="bg-destructive/10 text-destructive border-destructive/20">Atrasado</Badge>}
+                                                    {fatura.status === 'cancelado_historico' && <Badge className="bg-muted text-muted-foreground border-border">Cancelado</Badge>}
                                                 </TableCell>
                                                 <TableCell className="py-6 text-right px-6">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="text-[10px] font-bold tracking-widest uppercase hover:bg-background/50 h-8 px-4 border rounded-xl"
-                                                        onClick={() => toggleSubscriptionStatus(s.id, s.status === 'ativo' ? 'cancelado' : 'ativo')}
-                                                    >
-                                                        {s.status === 'ativo' ? 'Cancelar' : 'Reativar'}
-                                                    </Button>
+                                                    <div className="flex justify-end gap-2">
+                                                        {(fatura.status === 'aberto' || fatura.status === 'pendente' || fatura.status === 'atrasado') && (
+                                                            <Button
+                                                                size="sm"
+                                                                className="text-[10px] font-black tracking-widest uppercase bg-indigo-500 hover:bg-indigo-600 text-white h-8 px-4 border-0 rounded-xl"
+                                                                onClick={() => handlePayFatura(fatura)}
+                                                            >
+                                                                Mapear Pagamento
+                                                            </Button>
+                                                        )}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className={`text-[10px] font-bold tracking-widest uppercase hover:bg-background/50 h-8 px-4 border rounded-xl ${fatura.subscription.status === 'ativo' ? 'text-destructive border-destructive/20 hover:text-destructive' : 'text-emerald-500 border-emerald-500/20 hover:text-emerald-500'}`}
+                                                            onClick={() => toggleSubscriptionStatus(fatura.subscription.id, fatura.subscription.status === 'ativo' ? 'cancelado' : 'ativo')}
+                                                        >
+                                                            {fatura.subscription.status === 'ativo' ? 'Suspender' : 'Reativar'}
+                                                        </Button>
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         ))

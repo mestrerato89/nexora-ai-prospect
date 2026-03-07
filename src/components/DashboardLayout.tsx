@@ -19,17 +19,79 @@ import {
 } from "@/components/ui/popover";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { markAllAsRead, markAsRead as markSingleAsRead } from "@/lib/notifications";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, signOut, isAdmin } = useAuth();
   const navigate = useNavigate();
   const initials = user?.email?.charAt(0).toUpperCase() || "U";
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  const notifications = [
-    { id: 1, title: "Novo lead quente!", description: "Empresa XPTO demonstrou interesse.", time: "2 min atrás", type: "lead" },
-    { id: 2, title: "IA: Análise completa", description: "Sua prospecção de ontem foi analisada.", time: "1h atrás", type: "ai" },
-    { id: 3, title: "Nova atualização", description: "V1.2.4 já está no ar.", time: "5h atrás", type: "system" },
-  ];
+  const fetchNotifications = async () => {
+    if (!user) return;
+    const { data, error } = await (supabase as any)
+      .from('notifications')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (error) {
+      console.error('Error fetching notifications:', error);
+    } else {
+      setNotifications(data || []);
+      setUnreadCount(data?.filter((n: any) => !n.read).length || 0);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+
+    if (!user) return;
+    const channel = supabase
+      .channel('public:notifications')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${user.id}`
+      }, (payload) => {
+        setNotifications(prev => [payload.new, ...prev]);
+        setUnreadCount(prev => prev + 1);
+        toast(payload.new.title, {
+          description: payload.new.description,
+        });
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${user.id}`
+      }, () => {
+        fetchNotifications();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  const handleMarkAllRead = async () => {
+    if (!user) return;
+    await markAllAsRead(user.id);
+    fetchNotifications();
+  };
+
+  const handleMarkRead = async (id: string) => {
+    await markSingleAsRead(id);
+    fetchNotifications();
+  };
 
   return (
     <SidebarProvider>
@@ -57,26 +119,52 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                   </button>
                 </PopoverTrigger>
                 <PopoverContent align="end" className="w-80 bg-card border-primary/10 backdrop-blur-xl p-0 overflow-hidden shadow-2xl">
-                  <div className="p-4 border-b border-primary/5 bg-primary/5">
-                    <h3 className="font-bold text-sm flex items-center justify-between">
+                  <div className="p-4 border-b border-primary/5 bg-primary/5 flex items-center justify-between">
+                    <h3 className="font-bold text-sm tracking-tight">
                       Notificações
-                      <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full uppercase tracking-tighter">Novas: 3</span>
                     </h3>
+                    <div className="flex items-center gap-2">
+                      {unreadCount > 0 && (
+                        <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full font-black uppercase tracking-tighter shrink-0 animate-pulse">Novas: {unreadCount}</span>
+                      )}
+                      <button
+                        onClick={handleMarkAllRead}
+                        className="text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        Limpar
+                      </button>
+                    </div>
                   </div>
-                  <div className="max-h-[300px] overflow-y-auto">
-                    {notifications.map((n) => (
-                      <div key={n.id} className="p-4 border-b border-primary/5 hover:bg-primary/5 cursor-pointer transition-colors group">
-                        <div className="flex justify-between items-start mb-1">
-                          <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">{n.title}</p>
-                          <span className="text-[9px] text-muted-foreground whitespace-nowrap">{n.time}</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground line-clamp-2">{n.description}</p>
+                  <div className="max-h-[350px] overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="py-12 px-8 text-center">
+                        <Bell className="h-8 w-8 text-muted-foreground/20 mx-auto mb-3" />
+                        <p className="text-xs text-muted-foreground italic">Nenhuma notificação por aqui.</p>
                       </div>
-                    ))}
+                    ) : (
+                      notifications.map((n) => (
+                        <div
+                          key={n.id}
+                          onClick={() => handleMarkRead(n.id)}
+                          className={`p-4 border-b border-primary/5 hover:bg-primary/5 cursor-pointer transition-colors group relative ${!n.read ? 'bg-primary/[0.02]' : 'opacity-70'}`}
+                        >
+                          {!n.read && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary" />}
+                          <div className="flex justify-between items-start mb-1 gap-4">
+                            <p className={`text-xs font-bold transition-colors ${!n.read ? 'text-foreground group-hover:text-primary' : 'text-muted-foreground'}`}>
+                              {n.title}
+                            </p>
+                            <span className="text-[9px] text-muted-foreground whitespace-nowrap mt-0.5">
+                              {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: ptBR })}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed font-medium">{n.description}</p>
+                        </div>
+                      ))
+                    )}
                   </div>
                   <div className="p-2 bg-muted/20 text-center border-t border-primary/5">
-                    <button className="text-[10px] font-bold text-primary hover:underline uppercase tracking-widest">
-                      Ver Tudo
+                    <button className="text-[10px] font-black text-primary hover:underline uppercase tracking-widest py-1.5 block w-full">
+                      Ver Histórico Completo
                     </button>
                   </div>
                 </PopoverContent>

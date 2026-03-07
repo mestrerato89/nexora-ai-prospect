@@ -33,7 +33,8 @@ export default function Configuracoes() {
       phone: profile.phone,
       company_name: profile.company_name,
       company_cnpj: profile.company_cnpj,
-    }).eq("user_id", user.id);
+      notification_preferences: (profile as any).notification_preferences,
+    } as any).eq("user_id", user.id);
     if (error) toast.error(error.message);
     else toast.success("Configurações salvas!");
     setLoading(false);
@@ -178,24 +179,35 @@ export default function Configuracoes() {
 
               <div className="space-y-1">
                 {[
-                  { label: "Novos Leads Prospectados", desc: "Alertar quando uma nova empresa for adicionada ao CRM" },
-                  { label: "Follow-ups Pendentes", desc: "Lembretes diários de tarefas de acompanhamento" },
-                  { label: "Propostas Visualizadas", desc: "Saber quando o cliente abrir seu link de proposta" },
-                  { label: "Rataria AI: Resumo Diário", desc: "Resumo gerado por IA sobre sua performance e novas oportunidades" },
-                  { label: "WhatsApp: Alertas Diretos", desc: "Receber notificações de leads quentes direto no seu WhatsApp" },
-                  { label: "Temperatura de Leads", desc: "Avisar quando um lead frio começar a interagir novamente" },
-                  { label: "Relatórios Semanais", desc: "Estatísticas de conversão e sugestões de estratégia da Rataria" },
-                  { label: "Atualizações Críticas", desc: "Novas funcionalidades e avisos de sistema" },
+                  { key: "new_leads", label: "Novos Leads Prospectados", desc: "Alertar quando uma nova empresa for adicionada ao CRM" },
+                  { key: "follow_ups", label: "Follow-ups Pendentes", desc: "Lembretes diários de tarefas de acompanhamento" },
+                  { key: "proposals", label: "Propostas Visualizadas", desc: "Saber quando o cliente abrir seu link de proposta" },
+                  { key: "ai_summary", label: "Rataria AI: Resumo Diário", desc: "Resumo gerado por IA sobre sua performance e novas oportunidades" },
+                  { key: "whatsapp_alerts", label: "WhatsApp: Alertas Diretos", desc: "Receber notificações de leads quentes direto no seu WhatsApp" },
+                  { key: "lead_temperature", label: "Temperatura de Leads", desc: "Avisar quando um lead frio começar a interagir novamente" },
+                  { key: "weekly_reports", label: "Relatórios Semanais", desc: "Estatísticas de conversão e sugestões de estratégia da Rataria" },
+                  { key: "critical_updates", label: "Atualizações Críticas", desc: "Novas funcionalidades e avisos de sistema" },
                 ].map((item) => (
-                  <div key={item.label} className="flex items-center justify-between py-4 border-b border-border last:border-0 group">
+                  <div key={item.key} className="flex items-center justify-between py-4 border-b border-border last:border-0 group">
                     <div>
                       <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{item.label}</p>
                       <p className="text-xs text-muted-foreground">{item.desc}</p>
                     </div>
-                    <Switch defaultChecked className="data-[state=checked]:bg-primary" />
+                    <Switch
+                      checked={((profile as any).notification_preferences)?.[item.key] !== false}
+                      onCheckedChange={(checked) => {
+                        const prefs = { ...((profile as any).notification_preferences as any) || {} };
+                        prefs[item.key] = checked;
+                        setProfile({ ...profile, notification_preferences: prefs } as any);
+                      }}
+                      className="data-[state=checked]:bg-primary"
+                    />
                   </div>
                 ))}
               </div>
+              <Button onClick={save} disabled={loading} className="w-full bg-primary hover:bg-primary/90 h-11 mt-4">
+                {loading ? "Sincronizando..." : "Salvar Preferências de Notificação"}
+              </Button>
             </div>
           </TabsContent>
 

@@ -7,8 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { FileText, Download, ArrowLeft, User, Building2, ClipboardList, Sparkles, Loader2 } from "lucide-react";
-import { motion } from "framer-motion";
+import { FileText, Download, ArrowLeft, User, Building2, ClipboardList, Sparkles, Loader2, Save, Trash2, History, Clock, Copy, Check } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Badge } from "@/components/ui/badge";
 
 const TEMPLATES = [
   { id: "software", title: "Desenvolvimento de Software", emoji: "💻", desc: "App, site, sistema web ou mobile" },
@@ -31,6 +34,10 @@ export default function Contratos() {
     descricaoServico: "",
   });
   const [polishingField, setPolishingField] = useState<string | null>(null);
+  const [savedContracts, setSavedContracts] = useState<any[]>([]);
+  const [loadingSaved, setLoadingSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const polishWithAI = async (fieldKey: string) => {
     const text = fields[fieldKey as keyof typeof fields];
@@ -66,7 +73,7 @@ export default function Contratos() {
           if (!line.startsWith("data: ")) continue;
           const j = line.slice(6).trim();
           if (j === "[DONE]") break;
-          try { const c = JSON.parse(j).choices?.[0]?.delta?.content; if (c) result += c; } catch {}
+          try { const c = JSON.parse(j).choices?.[0]?.delta?.content; if (c) result += c; } catch { }
         }
       }
       if (result.trim()) {
@@ -77,14 +84,75 @@ export default function Contratos() {
     setPolishingField(null);
   };
 
+  const fetchSavedContracts = async () => {
+    if (!user) return;
+    setLoadingSaved(true);
+    const { data, error } = await (supabase as any)
+      .from("user_contracts")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (!error) setSavedContracts(data || []);
+    setLoadingSaved(false);
+  };
+
   useEffect(() => {
     if (!user) return;
+    fetchSavedContracts();
+
     supabase.from("profiles").select("*").eq("user_id", user.id).single().then(({ data }) => {
       if (data) {
         setFields((prev) => ({ ...prev, nomeContratado: data.display_name || "" }));
       }
     });
   }, [user]);
+
+  const saveContract = async () => {
+    if (!user) return;
+    setSaving(true);
+    const { error } = await (supabase as any).from("user_contracts").insert({
+      user_id: user.id,
+      title: `Contrato ${tpl?.title} - ${fields.nomeContratante || 'Sem Nome'}`,
+      content: contractPreview,
+      fields: fields,
+      template_id: selectedTemplate
+    });
+
+    if (error) {
+      if (error.message.includes("schema cache")) {
+        toast.error("Erro: A tabela de contratos não foi encontrada no banco. Por favor, execute a migração SQL.");
+      } else {
+        toast.error("Erro ao salvar contrato: " + error.message);
+      }
+    } else {
+      toast.success("Contrato salvo com sucesso!");
+      fetchSavedContracts();
+    }
+    setSaving(false);
+  };
+
+  const deleteContract = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm("Excluir este contrato permanentemente?")) return;
+    const { error } = await (supabase as any).from("user_contracts").delete().eq("id", id);
+    if (!error) {
+      toast.success("Contrato excluído");
+      fetchSavedContracts();
+    }
+  };
+
+  const loadContract = (contract: any) => {
+    setFields(contract.fields);
+    setSelectedTemplate(contract.template_id);
+    toast.info("Contrato carregado para edição");
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(contractPreview);
+    setCopied(true);
+    toast.success("Texto copiado para a área de transferência!");
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const set = (k: string, v: string) => setFields((p) => ({ ...p, [k]: v }));
 
@@ -152,23 +220,89 @@ CONTRATANTE: ${fields.nomeContratante || blank}`;
   if (!selectedTemplate) {
     return (
       <DashboardLayout>
-        <div className="space-y-6 max-w-[900px]">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-              <FileText className="h-6 w-6 text-primary" /> Contratos
+        <div className="space-y-10 max-w-[1000px] pb-20">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <h1 className="text-3xl font-black text-foreground tracking-tighter flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <FileText className="h-6 w-6 text-primary" />
+              </div>
+              Contratos & Acordos
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">Escolha um modelo para gerar seu contrato</p>
+            <p className="text-sm text-muted-foreground mt-2 font-medium">Gere documentos profissionais com auxílio de IA ou gerencie seus contratos salvos.</p>
+          </motion.div>
+
+          <div className="space-y-6">
+            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+              <Sparkles className="h-3 w-3" /> Novos Modelos IA
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {TEMPLATES.map((t, idx) => (
+                <motion.button
+                  key={t.id}
+                  onClick={() => setSelectedTemplate(t.id)}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.1 }}
+                  whileHover={{ y: -5, scale: 1.02 }}
+                  className="bg-card/50 backdrop-blur-sm rounded-2xl border border-primary/10 p-6 text-left hover:border-primary/30 transition-all group relative overflow-hidden shadow-sm"
+                >
+                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <Sparkles className="h-12 w-12 text-primary" />
+                  </div>
+                  <span className="text-4xl mb-4 block">{t.emoji}</span>
+                  <h3 className="font-bold text-foreground text-sm mb-1 leading-tight">{t.title}</h3>
+                  <p className="text-[10px] text-muted-foreground font-medium leading-relaxed">{t.desc}</p>
+                </motion.button>
+              ))}
+            </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {TEMPLATES.map((t) => (
-              <motion.button key={t.id} onClick={() => setSelectedTemplate(t.id)} whileHover={{ y: -2 }}
-                className="bg-card rounded-xl border border-border p-6 text-left card-hover group">
-                <span className="text-4xl mb-3 block">{t.emoji}</span>
-                <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">{t.title}</h3>
-                <p className="text-xs text-muted-foreground">{t.desc}</p>
-              </motion.button>
-            ))}
-          </div>
+
+          {savedContracts.length > 0 && (
+            <div className="space-y-6">
+              <h2 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+                <History className="h-3 w-3" /> Meus Contratos Recentes
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <AnimatePresence>
+                  {savedContracts.map((c) => (
+                    <motion.div
+                      key={c.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      onClick={() => loadContract(c)}
+                      className="bg-card/30 backdrop-blur-md rounded-2xl border border-border/50 p-5 cursor-pointer hover:border-primary/20 hover:bg-primary/[0.02] transition-all group flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="h-12 w-12 rounded-xl bg-secondary/50 flex items-center justify-center shrink-0 border border-border/40 group-hover:bg-primary/10 transition-colors">
+                          <FileText className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-sm text-foreground truncate">{c.title}</h4>
+                          <p className="text-[10px] text-muted-foreground font-medium flex items-center gap-1.5 mt-0.5">
+                            <Clock className="h-3 w-3" />
+                            Salvo em {format(new Date(c.created_at), "dd MMM 'às' HH:mm", { locale: ptBR })}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => deleteContract(c.id, e)}
+                        className="h-9 w-9 text-destructive/40 hover:text-destructive hover:bg-destructive/10 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            </div>
+          )}
         </div>
       </DashboardLayout>
     );
@@ -196,14 +330,28 @@ CONTRATANTE: ${fields.nomeContratante || blank}`;
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => setSelectedTemplate(null)}>
+          <Button variant="ghost" size="icon" onClick={() => setSelectedTemplate(null)} className="rounded-xl">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-bold text-foreground">Novo Contrato</h1>
+          <div className="space-y-0.5">
+            <h1 className="text-xl font-black text-foreground tracking-tight">Editor de Contrato</h1>
+            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{tpl?.title}</p>
+          </div>
         </div>
-        <Button onClick={handleDownloadPDF} className="gap-2">
-          <Download className="h-4 w-4" /> Baixar PDF
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={saveContract}
+            disabled={saving}
+            className="gap-2 border-primary/20 hover:bg-primary/5 text-primary font-bold h-10 px-6 rounded-xl"
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Salvar
+          </Button>
+          <Button onClick={handleDownloadPDF} className="gap-2 h-10 px-6 font-bold shadow-lg shadow-primary/20 rounded-xl">
+            <Download className="h-4 w-4" /> Baixar
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
@@ -297,13 +445,33 @@ CONTRATANTE: ${fields.nomeContratante || blank}`;
         </div>
 
         {/* Right: Live Preview */}
-        <div className="space-y-3 sticky top-4">
-          <p className="text-sm text-muted-foreground font-medium">Pré-visualização do Contrato</p>
-          <div className="bg-card rounded-xl border border-border p-6 max-h-[calc(100vh-180px)] overflow-y-auto">
-            <pre className="whitespace-pre-wrap text-sm text-foreground/80 font-serif leading-relaxed">
-              {contractPreview}
-            </pre>
+        <div className="space-y-4 sticky top-4">
+          <div className="flex items-center justify-between px-1">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">Documento Final</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCopy}
+              className="h-8 gap-2 text-[10px] font-black uppercase tracking-widest hover:bg-primary/10 hover:text-primary transition-colors"
+            >
+              {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+              {copied ? "Copiado" : "Copiar Texto"}
+            </Button>
           </div>
+          <div className="bg-white rounded-2xl border border-border shadow-2xl shadow-primary/5 overflow-hidden transition-all duration-500 hover:shadow-primary/10 relative">
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-primary/20" />
+            <div className="p-12 max-h-[calc(100vh-220px)] overflow-y-auto custom-scrollbar">
+              <div className="max-w-[700px] mx-auto">
+                <pre className="whitespace-pre-wrap text-[14px] text-zinc-900 font-serif leading-relaxed selection:bg-primary/20">
+                  {contractPreview}
+                </pre>
+              </div>
+            </div>
+            <div className="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-white to-transparent pointer-events-none" />
+          </div>
+          <p className="text-[10px] text-center text-muted-foreground font-medium italic">
+            Dica: Utilize o botão "Ajustar com IA" para formalizar cláusulas específicas.
+          </p>
         </div>
       </div>
     </DashboardLayout>

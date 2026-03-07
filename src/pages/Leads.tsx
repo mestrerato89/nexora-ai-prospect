@@ -13,6 +13,7 @@ import { Users, Search, Plus, Phone, Globe, Mail, MessageSquare, Trash2, LayoutG
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, subWeeks, subMonths, startOfMonth, endOfMonth, startOfYear, startOfDay, endOfDay, isAfter, isBefore, parseISO } from "date-fns";
+import { createNotification } from "@/lib/notifications";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Lead = Tables<"leads">;
@@ -527,6 +528,18 @@ export default function Leads() {
       return;
     }
     toast.success("Lead atribuído a você!");
+
+    // Notify about lead claim
+    const lead = leads.find(l => l.id === id);
+    if (lead) {
+      await createNotification(
+        user.id,
+        "Lead Atribuído! 🎯",
+        `Você assumiu o atendimento de ${lead.name}. Boa sorte no fechamento!`,
+        'lead'
+      );
+    }
+
     fetchLeads();
   };
 
