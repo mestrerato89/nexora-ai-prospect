@@ -97,14 +97,19 @@ export default function NovoSite() {
     setDescription("");
     setStep(1);
   };
-
   const handleMagicFill = async () => {
     if (!magicPrompt.trim()) {
-      toast.error("Cole o texto gerado pela IA primeiro");
+      toast.error("Cole os dados do projeto primeiro");
       return;
     }
 
-    setIsMagicLoading(true);
+    setStep(2);
+    setGenerating(true);
+    setGeneratedPrompt("");
+
+    const steps = ["Analisando suas diretrizes...", "Estruturando identidade visual...", "Gerando documento final..."];
+    for (const s of steps) { setGenStep(s); await new Promise((r) => setTimeout(r, 800)); }
+
     try {
       const resp = await fetch(CHAT_URL, {
         method: "POST",
@@ -115,30 +120,76 @@ export default function NovoSite() {
         body: JSON.stringify({
           messages: [{
             role: "user",
-            content: `Você é um extrator de dados JSON. Extraia as informações do texto abaixo seguindo ESTRITAMENTE o formato JSON.
-            
-TEXTO:
+            content: `Use the following data to generate a complete visual identity document following EXACTLY these rules.
+
+DADOS DO PROJETO (FORNECIDOS PELO USUÁRIO):
 ${magicPrompt}
 
-RESPONDA APENAS COM UM OBJETO JSON VÁLIDO (nada de marcação markdown) COM ESTE FORMATO EXATO:
-{
-  "nome": "Extraia o Nome do projeto",
-  "descricao": "Combine 'O que faz', 'Para quem', e 'Sensação desejada' em um parágrafo conciso",
-  "tema": "light ou dark baseado na resposta (se ambos, escolha o que fizer mais sentido)",
-  "keywords": "3 a 5 palavras-chave separadas por vírgula baseadas no nicho"
-}`
+INSTRUÇÕES DO PROMPT APLICÁVEL:
+
+# CRIAÇÃO DE IDENTIDADE VISUAL A PARTIR DE REFERÊNCIAS
+
+## O QUE ESTE PROMPT FAZ
+Você vai criar uma identidade visual ORIGINAL para o app listado acima. Não é trocar cores de um template. É criar uma experiência visual que tenha ALMA — onde cada tela conta uma história e cada componente tem personalidade.
+
+O resultado é um documento .md que funciona como "DNA visual" do projeto — qualquer IA que ler esse documento vai gerar interfaces com personalidade própria, não templates recoloridos.
+
+## O PROBLEMA QUE ESTE PROMPT RESOLVE
+Quando você pede pra uma IA criar uma interface, ela entrega o DEFAULT: Sidebar lateral + cards brancos vazios + tabela com headers + ícones Lucide soltos + Inter/Geist + sombra + rounded-lg + cores do Tailwind. Tudo flat, limpo, vazio.
+
+O que falta não é decoração (evite dot grids, blobs, partículas genéricas). É CONCEITO VISUAL.
+
+Um card de "Progresso" com um blob gradiente atrás do número = DECORADO, MAS SEM CONCEITO.
+Um card de "Progresso" com uma rota de avião tracejada indo de um ponto a outro = CONCEITO (conta a história: "sua viagem está aqui").
+
+## A REGRA DA COR ÚNICA
+A identidade visual deve ter UMA base limpa (light OU dark) + UMA cor primária forte.
+Todo o resto é neutro: cinzas, brancos, pretos. NUNCA criar arco-íris de categorias. Cores de status só para alertas.
+
+## AS TRÊS CAMADAS DA IDENTIDADE
+1. ESTRUTURA: Como a interface se organiza (Navegação, layout, hierarquia).
+2. LINGUAGEM: Como se expressa (Tipografia, um accent forte, geometria, sombras).
+3. RIQUEZA VISUAL: O nível essencial.
+- Nível A (Textura Ambiente): Pattern geométrico sutil no background (opacity 3-5%).
+- Nível B (Conceito Visual): Cada card importante deve ter uma ILUSTRAÇÃO CONCEITUAL usando SVG inline/CSS que conte uma história (Ex: uma grade organizando arquivos, cursores colaborando ao vivo, etc).
+
+Gere o documento Markdown com a seguinte estrutura EXATA:
+
+# IDENTIDADE VISUAL — (Tire o nome dos dados do projeto)
+
+## Stack Técnica e Regras
+(Listar regras Tailwind UI, shadcn, semântica de tokens, uma cor accent)
+
+## A Alma do App
+(2-3 frases firmes de personalidade baseadas na Sensação desejada)
+
+## Decisões de Identidade
+### ESTRUTURA
+(Decisões específicas)
+### LINGUAGEM
+(Decisões tipográficas, de cor, de forma baseadas no Tema e Referência de energia)
+### RIQUEZA VISUAL
+#### Textura Ambiente
+(O pattern de fundo)
+#### Conceitos Visuais por Componente
+(Defina: Representa, Metáfora visual, Cena detalhada, Viabilidade)
+
+## Tokens de Design
+(Cores Surface, Cores Texto, Cor Accent única e variações, Sombras, Geometria em formato de tabela)
+
+## Regra de Ouro
+A interface inteira usa base neutra + a cor primária da marca. Nenhuma outra cor vibrante.`
           }],
         }),
       });
 
       if (!resp.ok) throw new Error("Erro na requisição");
 
-      // Extract the full response
       const reader = resp.body?.getReader();
       if (!reader) throw new Error("Sem resposta");
 
       const decoder = new TextDecoder();
-      let fullResponse = "";
+      let result = "";
 
       while (true) {
         const { done, value } = await reader.read();
@@ -152,34 +203,26 @@ RESPONDA APENAS COM UM OBJETO JSON VÁLIDO (nada de marcação markdown) COM EST
           if (!line.startsWith("data: ")) continue;
 
           const dataStr = line.slice(6).trim();
-          if (dataStr === "[DONE]") continue;
+          if (dataStr === "[DONE]") break;
 
           try {
             const data = JSON.parse(dataStr);
             if (data.choices?.[0]?.delta?.content) {
-              fullResponse += data.choices[0].delta.content;
+              result += data.choices[0].delta.content;
+              setGeneratedPrompt(result);
             }
           } catch (e) { }
         }
       }
 
-      // Try to parse the extracted JSON
-      const jsonStr = fullResponse.replace(/```json/g, '').replace(/```/g, '').trim();
-      const extractedData = JSON.parse(jsonStr);
-
-      if (extractedData.nome) setSiteName(extractedData.nome);
-      if (extractedData.descricao) setDescription(extractedData.descricao);
-      if (extractedData.tema) setTheme(extractedData.tema === 'dark' ? 'dark' : 'light');
-      if (extractedData.keywords) setKeywords(extractedData.keywords);
-
-      setMagicPrompt(""); // Clear after success
-      toast.success("Campos preenchidos magicamente! ✨");
-
+      setGenStep("Concluído!");
     } catch (error) {
       console.error("Error magic fill:", error);
-      toast.error("Não foi possível extrair os dados. Tente preencher manualmente.");
+      toast.error("Erro ao gerar o documento.");
+      setGenStep("Erro");
     } finally {
       setIsMagicLoading(false);
+      setGenerating(false);
     }
   };
 
@@ -439,32 +482,32 @@ A interface inteira usa base neutra + a cor primária da marca. Nenhuma outra co
                   </div>
                 </div>
 
-                {/* PREMIUM MODE AUTO-FILL */}
+                {/* PREMIUM MODE AUTO-GENERATE */}
                 <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-3 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -z-10" />
                   <div className="flex items-center gap-2 text-primary font-bold text-sm">
-                    <Sparkles className="h-4 w-4" /> Modo Premium (Auto-preenchimento com IA)
+                    <Sparkles className="h-4 w-4" /> Modo Premium (Gerar com Base no Briefing)
                   </div>
-                  <p className="text-xs text-muted-foreground">Cole as respostas geradas pela IA abaixo. Nós extrairemos o Nome, Descrição e Keywords automaticamente para você.</p>
+                  <p className="text-xs text-muted-foreground">Cole o briefing completo da IA abaixo (Nome, O que faz, Sensação, Base do Tema). Nós geraremos a Identidade Visual ignorando o formulário padrão.</p>
                   <div className="flex flex-col sm:flex-row gap-3">
                     <textarea
                       value={magicPrompt}
                       onChange={(e) => setMagicPrompt(e.target.value)}
-                      placeholder="Cole o texto aqui... (Ex: 'me ajude a responder essas perguntas para uma loja...')"
+                      placeholder="Cole os dados do projeto aqui (Nome, O que faz, Referências...)"
                       className="flex-1 rounded-lg bg-background border border-border px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground resize-none h-20"
                     />
                     <Button
                       onClick={handleMagicFill}
-                      disabled={isMagicLoading || !magicPrompt.trim()}
+                      disabled={generating || !magicPrompt.trim()}
                       className="sm:h-20 shrink-0 gap-2 whitespace-nowrap"
                     >
-                      {isMagicLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                      {isMagicLoading ? "Analisando..." : "Preencher Formulário"}
+                      {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                      {generating ? "Gerando..." : "Gerar Identidade Visual"}
                     </Button>
                   </div>
                 </div>
                 <div className="my-6 border-b border-border/50 relative">
-                  <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 bg-card px-2 text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Ou preencha manualmente</div>
+                  <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 bg-card px-2 text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Ou use o formulário padrão</div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
