@@ -1,1 +1,1 @@
-fix: syntax error in edge function and improve social search
+fix: final robust search logic for instagram/facebook
