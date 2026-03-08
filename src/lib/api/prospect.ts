@@ -160,9 +160,9 @@ function mapLocalResult(r: any, i: number): ProspectResult {
   };
 }
 
-async function searchCloud(params: ProspectSearchParams): Promise<{ businesses: ProspectResult[]; source: SearchSource }> {
+async function searchCloud(params: ProspectSearchParams, tier?: "maps_only" | "gemini_only"): Promise<{ businesses: ProspectResult[]; source: SearchSource }> {
   const { data, error } = await supabase.functions.invoke("prospect-search", {
-    body: params,
+    body: { ...params, tier },
   });
 
   if (error) {
@@ -216,77 +216,77 @@ export async function searchProspects(
   params: ProspectSearchParams,
   onProgress?: (results: ProspectResult[], status: string) => void
 ): Promise<{ results: ProspectResult[]; source: SearchSource }> {
-  let cloudError: string | null = null;
 
-  // --- TIERED SEARCH STRATEGY ---
   onProgress?.([], "Iniciando busca inteligente...");
 
-  // First Tier: If platform is Instagram or Facebook, we skip local scraper
-  // as the local scraper is built specifically for Google Maps.
+  // ── Instagram / Facebook: vai direto pro Gemini (não tem scraper nem Maps para isso)
   if (params.platform === "instagram" || params.platform === "facebook") {
     onProgress?.([], `Conectando com inteligência avançada para ${params.platform}...`);
     try {
-      const cloudResponse = await searchCloud(params);
+      const cloudResponse = await searchCloud(params, "gemini_only");
       if (cloudResponse.businesses.length > 0) {
-        return {
-          // Skip prioritizeByLocation for social media, AI already does it
-          results: cloudResponse.businesses,
-          source: params.platform
-        };
+        return { results: cloudResponse.businesses, source: params.platform };
       }
     } catch (err: any) {
-      cloudError = err.message || `Erro na busca via ${params.platform}`;
-      console.warn(`[Prospect] API error for ${params.platform}:`, cloudError);
+      throw new Error(err.message || `Erro na busca via ${params.platform}`);
     }
-  } else {
-    // Original local scraper logic for Google Maps
-    const scraperOnline = await isScraperOnline();
-    if (scraperOnline) {
-      onProgress?.([], "Buscador local detectado! Consultando sem custos...");
-      try {
-        const { businesses, searchId } = await searchLocal(params);
-        if (businesses.length > 0) {
-          return { results: prioritizeByLocation(businesses, params.location), source: "scraper" };
-        }
+    throw new Error("Nenhum resultado encontrado para esta rede social.");
+  }
 
-        const results = await pollSearchStatus(params.niche, params.location, (partial, status) => {
-          onProgress?.(prioritizeByLocation(partial, params.location), status);
-        });
+  // ══════════════════════════════════════════════════════════════
+  // PRIORIDADE PARA GOOGLE MAPS: Offline → Maps API → Gemini
+  // ══════════════════════════════════════════════════════════════
 
-        if (results.length > 0) {
-          return { results: prioritizeByLocation(results, params.location), source: "scraper" };
-        }
-      } catch (localErr) {
-        console.warn("[Prospect] Local scraper attempt failed, falling back to Cloud:", localErr);
-      }
-    }
-
-    // 2. SECOND TIER: Google Cloud API (Paid / High Quality)
-    // If local is offline or failed, use the official API (which uses the $200 free credit).
-    onProgress?.([], "Buscador local offline. Conectando ao Google Cloud...");
+  // ── TIER 1: Scraper local (GRÁTIS, localhost:3099) ──
+  const scraperOnline = await isScraperOnline();
+  if (scraperOnline) {
+    onProgress?.([], "🟢 Buscador local detectado! Consultando sem custos...");
     try {
-      const cloudResponse = await searchCloud(params);
-      if (cloudResponse.businesses.length > 0) {
-        return {
-          results: prioritizeByLocation(cloudResponse.businesses, params.location),
-          source: cloudResponse.source
-        };
+      const { businesses, searchId } = await searchLocal(params);
+      if (businesses.length > 0) {
+        return { results: prioritizeByLocation(businesses, params.location), source: "scraper" };
       }
-    } catch (err: any) {
-      cloudError = err.message || "Erro na conexão Cloud";
-      console.warn("[Prospect] Cloud API error:", cloudError);
+
+      const results = await pollSearchStatus(params.niche, params.location, (partial, status) => {
+        onProgress?.(prioritizeByLocation(partial, params.location), status);
+      });
+
+      if (results.length > 0) {
+        return { results: prioritizeByLocation(results, params.location), source: "scraper" };
+      }
+    } catch (localErr) {
+      console.warn("[Prospect] Local scraper failed, trying Maps API...", localErr);
     }
   }
 
-  // 3. THIRD TIER: Gemini Fallback (AI-powered search)
-  // This is already integrated within the searchCloud function on the backend as a fallback.
-  // We explain the final status to the user if everything fails.
-
-  if (cloudError) {
-    if (cloudError.includes("API Key") || cloudError.includes("variable") || cloudError.includes("prospect-search")) {
-      throw new Error("Erro de Configuração:\nSua chave Google Maps API não foi configurada no Supabase ou o limite de busca foi excedido.");
+  // ── TIER 2: Google Maps API SOMENTE (sem Gemini, economiza créditos) ──
+  onProgress?.([], "🔵 Consultando Google Maps API...");
+  try {
+    const mapsResponse = await searchCloud(params, "maps_only");
+    if (mapsResponse.businesses.length > 0) {
+      return {
+        results: prioritizeByLocation(mapsResponse.businesses, params.location),
+        source: mapsResponse.source
+      };
     }
-    throw new Error(`Erro na busca: ${cloudError}`);
+  } catch (mapsErr: any) {
+    console.warn("[Prospect] Maps API failed:", mapsErr.message);
+    // Don't throw — fall through to Gemini
+  }
+
+  // ── TIER 3: Gemini IA (último recurso) ──
+  onProgress?.([], "🟡 Google Maps sem resultados. Usando IA como último recurso...");
+  try {
+    const geminiResponse = await searchCloud(params, "gemini_only");
+    if (geminiResponse.businesses.length > 0) {
+      return {
+        results: prioritizeByLocation(geminiResponse.businesses, params.location),
+        source: geminiResponse.source
+      };
+    }
+  } catch (geminiErr: any) {
+    console.warn("[Prospect] Gemini failed:", geminiErr.message);
+    throw new Error(`Erro na busca: ${geminiErr.message}`);
   }
 
   throw new Error("Nenhum resultado encontrado:\nO buscador local está offline e o Google Cloud não retornou dados para este nicho/localização.");

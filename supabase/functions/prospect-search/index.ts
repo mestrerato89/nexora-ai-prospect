@@ -333,22 +333,34 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { niche, location, maxResults = 20, minRating = 0, platform } = await req.json();
+    // tier: "maps_only" = only Google Maps, "gemini_only" = only Gemini, undefined = legacy (all)
+    const { niche, location, maxResults = 20, minRating = 0, platform, tier } = await req.json();
     const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY");
     const GOOGLE_KEY = Deno.env.get("GOOGLE_MAPS_API_KEY");
 
     let businesses: any[] = [];
     let source = "google_places";
 
-    // 1. Tenta Google Maps (apenas se não for rede social)
-    if (GOOGLE_KEY && (!platform || platform === "google_maps")) {
+    const useMaps = tier !== "gemini_only";
+    const useGemini = tier !== "maps_only";
+
+    // ── TIER 1: Google Maps API ──
+    if (useMaps && GOOGLE_KEY && (!platform || platform === "google_maps")) {
       try {
         businesses = await searchGooglePlaces(GOOGLE_KEY, niche, location, maxResults);
       } catch (e) { console.error("Maps failed", e); }
     }
 
-    // 2. Se falhou ou for rede social, tenta Gemini com Pesquisa Web
-    if (!businesses.length && GEMINI_KEY) {
+    // If tier is maps_only, never touch Gemini
+    if (tier === "maps_only") {
+      if (!businesses.length) {
+        return new Response(JSON.stringify({ error: "Google Maps não retornou resultados para este nicho/localização." }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
+    // ── TIER 2: Gemini com Pesquisa Web (grounded) ──
+    if (!businesses.length && useGemini && GEMINI_KEY) {
       try {
         const text = await geminiGroundedSearch(GEMINI_KEY, niche, location, maxResults, platform);
         if (text) {
@@ -358,8 +370,8 @@ serve(async (req) => {
       } catch (e) { console.error("Gemini Search failed", e); }
     }
 
-    // 3. Resgate final: Conhecimento nativo (Nunca falha)
-    if (!businesses.length && GEMINI_KEY) {
+    // ── TIER 3: Gemini Knowledge (último recurso) ──
+    if (!businesses.length && useGemini && GEMINI_KEY) {
       console.log("Using Knowledge Fallback...");
       businesses = await geminiKnowledgeSearch(GEMINI_KEY, niche, location, maxResults, platform);
       source = "ai_knowledge";
