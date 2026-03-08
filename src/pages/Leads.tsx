@@ -258,11 +258,11 @@ const LeadProfileDialog = ({
 
   return (
     <Dialog open={!!selectedLead} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-card border-border max-w-lg shadow-2xl p-0 overflow-hidden rounded-[2.5rem] w-full max-h-[95vh] flex flex-col">
+      <DialogContent className="bg-card border-border max-w-lg shadow-2xl p-0 overflow-hidden rounded-[2rem] w-full max-h-[98vh] flex flex-col">
         <div className="h-1.5 shrink-0 bg-gradient-to-r from-primary via-primary/50 to-transparent" />
 
-        <div className="p-6 md:p-8 space-y-6 md:space-y-8 overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-primary/10 hover:scrollbar-thumb-primary/20 scrollbar-track-transparent">
-          <DialogHeader className="space-y-4">
+        <div className="p-4 md:p-5 space-y-4 overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-primary/10 hover:scrollbar-thumb-primary/20 scrollbar-track-transparent">
+          <DialogHeader className="space-y-2">
             <div className="flex items-center justify-between">
               <Badge className={`${sc?.color || ""} border-0 text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-full shadow-lg shadow-primary/5`}>
                 {sc?.label || lead.status}
@@ -280,27 +280,27 @@ const LeadProfileDialog = ({
                 </Badge>
               )}
             </div>
-            <DialogTitle className="text-4xl font-black tracking-tight text-foreground leading-[1.1] pt-1">
+            <DialogTitle className="text-2xl font-black tracking-tight text-foreground leading-[1.1] pt-1">
               {lead.name}
             </DialogTitle>
           </DialogHeader>
 
           {/* Stats Board */}
-          <div className="grid grid-cols-2 gap-6">
-            <div className="bg-secondary/20 rounded-[2.5rem] p-6 border border-border/40 flex flex-col items-center justify-center text-center group hover:bg-secondary/30 transition-all duration-300 shadow-inner">
-              <span className="text-[10px] uppercase text-muted-foreground font-black tracking-widest mb-2 shadow-sm px-3 py-1 rounded-full bg-background/80">Precisão IA</span>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-secondary/20 rounded-2xl p-4 border border-border/40 flex flex-col items-center justify-center text-center group hover:bg-secondary/30 transition-all duration-300 shadow-inner">
+              <span className="text-[9px] uppercase text-muted-foreground font-black tracking-widest mb-1 shadow-sm px-2 py-0.5 rounded-full bg-background/80">Precisão IA</span>
               <div className="flex items-baseline gap-1 mt-1">
-                <span className={`text-4xl font-black tracking-tighter ${(lead.score || 0) >= 80 ? "text-emerald-500" : (lead.score || 0) >= 50 ? "text-amber-500" : "text-muted-foreground"}`}>
+                <span className={`text-2xl font-black tracking-tighter ${(lead.score || 0) >= 80 ? "text-emerald-500" : (lead.score || 0) >= 50 ? "text-amber-500" : "text-muted-foreground"}`}>
                   {lead.score || "100"}
                 </span>
-                <span className="text-sm font-bold text-muted-foreground/40 font-mono">%</span>
+                <span className="text-xs font-bold text-muted-foreground/40 font-mono">%</span>
               </div>
             </div>
-            <div className="bg-secondary/20 rounded-[2.5rem] p-6 border border-border/40 flex flex-col items-center justify-center text-center group hover:bg-secondary/30 transition-all duration-300 shadow-inner">
-              <span className="text-[10px] uppercase text-muted-foreground font-black tracking-widest mb-2 shadow-sm px-3 py-1 rounded-full bg-background/80">Avaliação</span>
-              <div className="flex items-center gap-2 mt-1">
-                <Star className="h-6 w-6 text-amber-500 fill-amber-500" />
-                <span className="text-4xl font-black tracking-tighter text-foreground">
+            <div className="bg-secondary/20 rounded-2xl p-4 border border-border/40 flex flex-col items-center justify-center text-center group hover:bg-secondary/30 transition-all duration-300 shadow-inner">
+              <span className="text-[9px] uppercase text-muted-foreground font-black tracking-widest mb-1 shadow-sm px-2 py-0.5 rounded-full bg-background/80">Avaliação</span>
+              <div className="flex items-center gap-1.5 mt-1">
+                <Star className="h-5 w-5 text-amber-500 fill-amber-500" />
+                <span className="text-2xl font-black tracking-tighter text-foreground">
                   {Number(lead.rating) > 0 ? Number(lead.rating).toFixed(1) : "4.8"}
                 </span>
               </div>
@@ -308,24 +308,25 @@ const LeadProfileDialog = ({
           </div>
 
           {/* Info Sections */}
-          <div className="space-y-4">
-            <div className="p-6 bg-secondary/30 rounded-[2.5rem] border border-border/40 group hover:border-primary/20 transition-all">
-              <div className="flex items-start gap-4">
-                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/10 group-hover:scale-110 transition-transform">
-                  <MapPin className="h-6 w-6 text-primary" />
+          {/* Info Sections */}
+          <div className="space-y-2">
+            <div className="p-3 bg-secondary/30 rounded-2xl border border-border/40 group hover:border-primary/20 transition-all">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/10 group-hover:scale-110 transition-transform">
+                  <MapPin className="h-4 w-4 text-primary" />
                 </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Localização</p>
-                  <p className="text-sm font-bold text-foreground leading-relaxed">{lead.address || "Endereço não informado"}</p>
+                <div className="space-y-0.5">
+                  <p className="text-[9px] uppercase font-black tracking-widest text-muted-foreground">Localização</p>
+                  <p className="text-xs font-bold text-foreground leading-tight">{lead.address || "Endereço não informado"}</p>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-6 bg-secondary/30 rounded-[2.5rem] border border-border/40 group hover:border-emerald-500/20 transition-all">
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/10 group-hover:scale-110 transition-transform">
-                    <Phone className="h-5 w-5 text-emerald-500" />
+            <div className="grid grid-cols-2 gap-2">
+              <div className="p-3 bg-secondary/30 rounded-2xl border border-border/40 group hover:border-emerald-500/20 transition-all">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/10 group-hover:scale-110 transition-transform">
+                    <Phone className="h-4 w-4 text-emerald-500" />
                   </div>
                   <div className="space-y-0.5 min-w-0">
                     <p className="text-[9px] uppercase font-black tracking-widest text-muted-foreground">Telefone</p>
@@ -334,10 +335,10 @@ const LeadProfileDialog = ({
                 </div>
               </div>
 
-              <div className="p-6 bg-secondary/30 rounded-[2.5rem] border border-border/40 group hover:border-blue-500/20 transition-all">
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-2xl bg-blue-500/10 flex items-center justify-center shrink-0 border border-blue-500/10 group-hover:scale-110 transition-transform">
-                    <Mail className="h-5 w-5 text-blue-500" />
+              <div className="p-3 bg-secondary/30 rounded-2xl border border-border/40 group hover:border-blue-500/20 transition-all">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0 border border-blue-500/10 group-hover:scale-110 transition-transform">
+                    <Mail className="h-4 w-4 text-blue-500" />
                   </div>
                   <div className="space-y-0.5 min-w-0">
                     <p className="text-[9px] uppercase font-black tracking-widest text-muted-foreground">E-mail</p>
@@ -348,10 +349,10 @@ const LeadProfileDialog = ({
             </div>
 
             {lead.website && (
-              <div className="p-6 bg-secondary/30 rounded-[2.5rem] border border-border/40 group hover:border-info/20 transition-all">
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-2xl bg-info/10 flex items-center justify-center shrink-0 border border-info/10 group-hover:scale-110 transition-transform">
-                    <Globe className="h-5 w-5 text-info" />
+              <div className="p-3 bg-secondary/30 rounded-2xl border border-border/40 group hover:border-info/20 transition-all">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-xl bg-info/10 flex items-center justify-center shrink-0 border border-info/10 group-hover:scale-110 transition-transform">
+                    <Globe className="h-4 w-4 text-info" />
                   </div>
                   <div className="space-y-0.5 min-w-0">
                     <p className="text-[9px] uppercase font-black tracking-widest text-muted-foreground">Website</p>
@@ -362,14 +363,14 @@ const LeadProfileDialog = ({
             )}
 
             {lead.notes && (
-              <div className="p-6 bg-secondary/30 rounded-[2.5rem] border border-border/40 group hover:border-warning/20 transition-all">
-                <div className="flex items-start gap-4">
-                  <div className="h-12 w-12 rounded-2xl bg-warning/10 flex items-center justify-center shrink-0 border border-warning/10 group-hover:scale-110 transition-transform">
-                    <FileText className="h-6 w-6 text-warning" />
+              <div className="p-3 bg-secondary/30 rounded-2xl border border-border/40 group hover:border-warning/20 transition-all">
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-xl bg-warning/10 flex items-center justify-center shrink-0 border border-warning/10 group-hover:scale-110 transition-transform">
+                    <FileText className="h-4 w-4 text-warning" />
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Observação</p>
-                    <p className="text-sm font-bold text-foreground leading-relaxed whitespace-pre-wrap">{lead.notes}</p>
+                  <div className="space-y-0.5 mt-0.5">
+                    <p className="text-[9px] uppercase font-black tracking-widest text-muted-foreground">Observação</p>
+                    <p className="text-xs font-bold text-foreground leading-relaxed whitespace-pre-wrap">{lead.notes}</p>
                   </div>
                 </div>
               </div>
@@ -377,18 +378,17 @@ const LeadProfileDialog = ({
           </div>
 
           {/* Status Change */}
-          <div className="space-y-4 pt-4">
+          <div className="space-y-2 pt-2">
             <div className="flex items-center justify-between px-2">
-              <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-muted-foreground">Jornada do Lead</h4>
-              <Badge variant="secondary" className="text-[9px] bg-secondary/50 font-black uppercase p-1 px-2">{sc?.label}</Badge>
+              <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Jornada do Lead</h4>
             </div>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-4 gap-1.5">
               {STATUSES.map((status) => (
                 <button
                   key={status}
                   onClick={() => updateStatus(lead.id, status)}
-                  className={`py-3 text-[9px] font-extrabold uppercase tracking-widest rounded-2xl border transition-all active:scale-95 ${lead.status === status
-                    ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20"
+                  className={`py-1.5 text-[9px] font-extrabold uppercase tracking-widest rounded-xl border transition-all active:scale-95 ${lead.status === status
+                    ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
                     : "bg-secondary/40 border-border/40 text-muted-foreground hover:bg-secondary hover:border-border"
                     }`}
                 >
@@ -398,53 +398,50 @@ const LeadProfileDialog = ({
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 pt-6 border-t border-border/40">
+          <div className="flex flex-col gap-2 pt-4 border-t border-border/40">
             {!lead.user_id && (
               <Button
                 onClick={() => { onClaim(lead.id); onClose(); }}
-                className="w-full h-16 rounded-3xl bg-primary hover:bg-primary/90 text-primary-foreground font-black shadow-xl shadow-primary/20 border-0 gap-3 active:scale-[0.98] transition-all"
+                className="w-full h-12 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-black shadow-lg shadow-primary/20 border-0 gap-2 active:scale-[0.98] transition-all"
               >
-                <Users className="h-5 w-5" />
+                <Users className="h-4 w-4" />
                 PEGAR ESTE LEAD AGORA
               </Button>
             )}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <Button
                 asChild
-                className="flex-1 h-16 rounded-3xl bg-secondary/50 hover:bg-secondary text-foreground font-black border border-border/60 gap-3 active:scale-[0.98] transition-all"
+                className="flex-1 h-12 rounded-2xl bg-secondary/50 hover:bg-secondary text-foreground font-black border border-border/60 gap-2 active:scale-[0.98] transition-all"
               >
-                <a href={mapsUrl} target="_blank" rel="noopener">
-                  <MapPin className="h-5 w-5 text-primary" />
+                <a href={mapsUrl} target="_blank" rel="noopener text-[11px]">
+                  <MapPin className="h-4 w-4 text-primary" />
                   Google Maps
                 </a>
               </Button>
               <Button
                 asChild
-                className="flex-1 h-16 rounded-3xl bg-emerald-500 hover:bg-emerald-600 text-white font-black shadow-xl shadow-emerald-500/20 border-0 gap-3 active:scale-[0.98] transition-all"
+                className="flex-1 h-12 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-black shadow-lg shadow-emerald-500/20 border-0 gap-2 active:scale-[0.98] transition-all"
               >
-                <a href={`https://wa.me/${lead.phone?.replace(/\D/g, "")}`} target="_blank" rel="noopener">
-                  <MessageSquare className="h-5 w-5" />
+                <a href={`https://wa.me/${lead.phone?.replace(/\D/g, "")}`} target="_blank" rel="noopener text-[11px]">
+                  <MessageSquare className="h-4 w-4" />
                   WhatsApp
                 </a>
               </Button>
-
-              <div className="flex-none">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-16 w-16 rounded-3xl text-destructive/40 hover:text-destructive hover:bg-destructive/10 transition-all border border-border/40 hover:border-destructive/20 active:scale-90">
-                      <Trash2 className="h-6 w-6" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-72 p-6 rounded-[2.5rem] border-border shadow-2xl" align="end">
-                    <h3 className="text-base font-black mb-1">Gerenciar Lead</h3>
-                    <p className="text-xs text-muted-foreground mb-4 font-medium leading-relaxed">Arquive para limpar sua visão ou exclua o lead definitivamente de sua base.</p>
-                    <div className="flex flex-col gap-2">
-                      <Button variant="outline" className="rounded-2xl font-bold h-12 hover:bg-secondary transition-all" onClick={() => { archiveLead(lead.id); onClose(); }}>Arquivar</Button>
-                      <Button variant="destructive" className="rounded-2xl font-black h-12 active:scale-95 transition-all" onClick={() => { permanentDeleteLead(lead.id); onClose(); }}>Excluir Permanente</Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl text-destructive/40 hover:text-destructive hover:bg-destructive/10 transition-all border border-border/40 hover:border-destructive/20 active:scale-90 shrink-0">
+                    <Trash2 className="h-5 w-5" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-4 rounded-3xl border-border shadow-2xl" align="end">
+                  <h3 className="text-sm font-black mb-1">Gerenciar Lead</h3>
+                  <p className="text-[10px] text-muted-foreground mb-3 font-medium leading-relaxed">Arquive para limpar sua visão ou exclua definitivamente.</p>
+                  <div className="flex flex-col gap-2">
+                    <Button variant="outline" size="sm" className="rounded-xl font-bold hover:bg-secondary transition-all" onClick={() => { archiveLead(lead.id); onClose(); }}>Arquivar</Button>
+                    <Button variant="destructive" size="sm" className="rounded-xl font-black active:scale-95 transition-all" onClick={() => { permanentDeleteLead(lead.id); onClose(); }}>Excluir Permanente</Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </div>
