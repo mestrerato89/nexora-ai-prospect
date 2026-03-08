@@ -116,25 +116,86 @@ export default function NovoSite() {
         body: JSON.stringify({
           messages: [{
             role: "user",
-            content: `Gere um prompt técnico completo para criar um ${siteType === "landing" ? "Landing Page" : "Site Institucional"} para "${selectedNiche?.title}".
+            content: `Crie uma ESPECIFICAÇÃO TÉCNICA COMPLETA E PREMIUM para a criação de um ${siteType === "landing" ? "Landing Page de Alta Conversão" : "Site Institucional Completo"}.
 
-Nome: ${siteName || selectedNiche?.title}
-Descrição: ${description || "Site padrão para o nicho"}
-Tipo: ${siteType === "landing" ? "Landing Page de alta conversão" : "Site institucional completo"}
-Tema: ${theme === "light" ? "Claro" : "Escuro"}
-Cor primária: ${primaryColor}
-Seções: ${sections.join(", ")}
-Keywords SEO: ${keywords || "Automáticas"}
+DADOS DO PROJETO:
+- Nome: "${siteName || selectedNiche?.title}"
+- Nicho: ${selectedNiche?.title}
+- Tipo: ${siteType === "landing" ? "Landing Page de Alta Conversão" : "Site Institucional Completo"}
+- Tema Visual: ${theme === "light" ? "Light Mode clean e elegante" : "Dark Mode premium e sofisticado (Dark Mode)"}
+- Cor Primária (Acentuação, CTAs): ${primaryColor}
+- Seções selecionadas: ${sections.join(", ")}
+- Keywords SEO: ${keywords || "Automáticas baseadas no nicho"}
+- Descrição adicional: ${description || "Site premium para o nicho"}
 
-O prompt deve incluir:
-1. Estrutura completa de seções com textos sugeridos
-2. Estratégia de conversão (CTAs, formulários)
-3. SEO: meta tags, heading structure, keywords
-4. Layout sugerido (desktop e mobile)
-5. Integrações recomendadas
-6. Copy persuasivo para cada seção
+ESTRUTURA OBRIGATÓRIA DO DOCUMENTO (siga EXATAMENTE esta ordem):
 
-Formato: Markdown bem estruturado.`
+## 1. Configurações Globais
+- Nome da Solução, Tipo de Página, Tema Visual
+- Cor Primária: ${primaryColor} (hex exato)
+- Cor de Fundo Principal: hex exato (ex: #1A1A2E para dark, #FAFAFA para light)
+- Cor de Texto Principal: hex exato para alto contraste
+- Tipografia: fonte ESPECÍFICA para Headlines (ex: Montserrat Bold) e Corpo (ex: Open Sans Regular)
+- Iconografia: estilo dos ícones (minimalistas, cor primária ou branco)
+
+## 2. Estrutura de Seções, Copy e Estratégia de Conversão
+Para CADA seção, inclua OBRIGATORIAMENTE:
+
+### 2.1 Seção Hero (Acima da Dobra)
+- Layout: Full-width com imagem/vídeo de fundo + overlay escuro
+- H1 (Headline): texto ESPECÍFICO para o nicho "${selectedNiche?.title}" (NÃO genérico)
+- Subheadline: texto persuasivo complementar
+- CTA Principal: texto do botão, estilo, cor (${primaryColor}), destino
+- Elemento visual adicional (setas, animações)
+
+### 2.2 Seção de Benefícios/Recursos
+- Título H2 e Subtítulo
+- 3-4 cards com: Ícone + Título H3 + Descrição curta
+- Conteúdo 100% relevante ao nicho "${selectedNiche?.title}"
+
+### 2.3 Seções específicas do nicho
+(Ex: para Barbearia = Galeria de Cortes + Agendamento; para Restaurante = Cardápio + Reservas; para E-commerce = Vitrine de Produtos + Categorias)
+- Cada seção com: Layout, Títulos H2/H3, Copy persuasivo, CTAs
+
+### 2.4 Seção de Depoimentos/Casos de Sucesso
+- 2-3 depoimentos com: Foto, Nome, Avaliação (estrelas), Citação realista do nicho
+
+### 2.5 Seção CTA Final / Formulário
+- Título H2 urgente
+- Formulário: campos obrigatórios e opcionais
+- Botão de envio com texto persuasivo
+- Texto de privacidade
+
+### 2.6 Footer
+- Links, Redes Sociais, Contato, Copyright
+
+## 3. Estratégia de SEO
+- Meta Title: texto otimizado (máx 60 chars)
+- Meta Description: texto persuasivo (máx 160 chars)
+- Heading Structure: H1, H2s, H3s listados
+- Keywords SEO: 8-12 palavras-chave relevantes ao nicho
+
+## 4. Layout Sugerido (Desktop e Mobile)
+### Desktop:
+- Espaçamento, alinhamento, tamanhos de imagem
+- Animações sutis (fade-in ao scroll, hover effects)
+### Mobile:
+- Responsividade, empilhamento vertical
+- CTAs sticky, tipografia ajustada
+
+## 5. Integrações Recomendadas
+Liste integrações CONCRETAS com nome da API/serviço:
+- Analytics (Google Analytics 4 + Tag Manager)
+- Marketing (Facebook Pixel / Meta Pixel)
+- CRM e E-mail Marketing (Mailchimp, RD Station)
+- Suporte (JivoChat, Tawk.to, WhatsApp Business)
+- Outras relevantes ao nicho
+
+REGRAS DE QUALIDADE:
+- NÃO seja genérico. Todo conteúdo (copy, títulos, CTAs) deve ser ESPECÍFICO para "${selectedNiche?.title}".
+- Use terminologia do nicho nos textos sugeridos.
+- O resultado deve parecer uma especificação de consultoria profissional de alta qualidade.
+- Formato: Markdown bem estruturado com headers, listas e sub-listas.`
           }],
         }),
       });

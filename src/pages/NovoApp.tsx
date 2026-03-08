@@ -108,23 +108,78 @@ export default function NovoApp() {
         body: JSON.stringify({
           messages: [{
             role: "user",
-            content: `Gere um prompt técnico completo e detalhado para criar um aplicativo mobile-first para o nicho "${selectedNiche?.title}".
+            content: `Crie uma ESPECIFICAÇÃO TÉCNICA COMPLETA E PREMIUM para o desenvolvimento de um aplicativo mobile-first.
 
-Nome do app: ${appName || selectedNiche?.title}
-Descrição: ${description || "Aplicativo padrão para o nicho"}
-Tema: ${theme === "light" ? "Claro" : "Escuro"}
-Cor primária: ${primaryColor}
-Funcionalidades: ${features.join(", ")}
+DADOS DO PROJETO:
+- Nome do App: "${appName || selectedNiche?.title}"
+- Nicho: ${selectedNiche?.title}
+- Tema Visual: ${theme === "light" ? "Light Mode clean e moderno" : "Dark Mode premium e sofisticado"}
+- Cor Primária (CTA, ícones ativos, destaques): ${primaryColor}
+- Funcionalidades selecionadas: ${features.join(", ")}
+- Descrição adicional: ${description || "Aplicativo premium para o nicho"}
 
-O prompt deve incluir:
-1. Visão geral do projeto
-2. Lista detalhada de telas e funcionalidades
-3. Estrutura de dados sugerida
-4. Sugestões de UI/UX
-5. Integrações recomendadas
-6. Requisitos técnicos
+ESTRUTURA OBRIGATÓRIA DO DOCUMENTO (siga EXATAMENTE esta ordem):
 
-Formato: Markdown bem estruturado, pronto para ser usado como especificação técnica.`
+## 1. Visão Geral do Projeto
+- Nome, Nicho, Conceito do app (1 parágrafo forte e conciso)
+- Design: descreva a estética visual (ex: "Dark Mode profundo, transmitindo sofisticação")
+- Objetivo Principal: qual problema o app resolve para o usuário final
+
+## 2. Telas e Funcionalidades Detalhadas
+### A. Fluxo do Cliente (Client-Side)
+Para CADA tela, descreva:
+- Nome da tela
+- O que ela exibe (elementos visuais: banners, cards, atalhos, status)
+- Interações do usuário
+- Telas obrigatórias: Onboarding/Login, Home (Dashboard com banner de promoção, próximo agendamento/pedido, status de fidelidade), Catálogo/Cardápio detalhado com categorias, Fluxo principal (agendamento/pedido), Programa de Fidelidade (carteira digital de selos), Histórico com avaliações (1-5 estrelas)
+
+### B. Painel do Administrador (Admin-Side)
+- Agenda/Pedidos em tempo real
+- Gestão de Clientes (CRM básico com histórico)
+- Configurações de serviços/produtos (preços, tempos)
+- Dashboard com métricas
+
+## 3. Estrutura de Dados Sugerida
+Liste as tabelas/coleções com seus campos:
+- Users: id, nome, celular, email, role, avatar_url
+- (Tabelas específicas do nicho: Services/Products, Appointments/Orders, etc.)
+- LoyaltyCards: user_id, pontos, total_acumulado
+- Reviews: id, user_id, rating, comentario, data
+
+## 4. Sugestões de UI/UX (Design System)
+SEJA EXTREMAMENTE ESPECÍFICO:
+- Cor de fundo: hex exato (ex: #121212 para dark)
+- Cor de superfícies/cards: hex exato (ex: #1e1e1e)
+- Cor primária: ${primaryColor} (para CTAs, ícones ativos, selos)
+- Cor de texto: hex exato
+- Tipografia: fonte específica (ex: Inter, Montserrat) com pesos para títulos e corpo
+- Border radius dos botões (ex: 8px)
+- Componentes: skeleton screens, feedback tátil, animações de transição
+- Navegação inferior (tab bar) com ícones: liste cada aba
+
+## 5. Integrações Recomendadas
+Liste integrações CONCRETAS com nome da API:
+- Mensageria (WhatsApp Business API para lembretes)
+- Calendário (Google Calendar API)
+- Pagamento (Stripe/Asaas/Pix)
+- Push Notifications (Firebase Cloud Messaging)
+- Outras relevantes ao nicho
+
+## 6. Requisitos Técnicos
+- Frontend: framework específico (React Native ou Flutter)
+- Backend: framework específico (Node.js + Fastify/NestJS)
+- Banco de Dados: PostgreSQL ou Supabase
+- Cache: Redis para evitar conflitos (double booking/pedidos duplicados)
+- Hospedagem: AWS ou GCP
+
+## 7. Instrução Final para IA de Código
+Termine com um parágrafo começando com "Aja como um desenvolvedor Full Stack Senior..." instruindo a IA a gerar a estrutura de pastas, esquema de cores no tema e a lógica de validação do componente principal do app.
+
+REGRAS DE QUALIDADE:
+- NÃO seja genérico. Cada seção deve ter conteúdo ESPECÍFICO para o nicho "${selectedNiche?.title}".
+- Use terminologia do nicho (ex: para barbearia use "Corte Degradê", "Barba Completa"; para pizzaria use "sabores", "borda recheada").
+- O resultado deve parecer uma especificação técnica profissional de consultoria, NÃO um esboço superficial.
+- Formato: Markdown bem estruturado com headers, listas e sub-listas.`
           }],
         }),
       });
