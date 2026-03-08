@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Users, Search, Plus, Phone, Globe, Mail, MessageSquare, Trash2, LayoutGrid, List, Star, MapPin, ExternalLink, Archive, RotateCcw, Calendar, DollarSign, Clock, GripVertical, PhoneCall } from "lucide-react";
+import { Users, Search, Plus, Phone, Globe, Mail, MessageSquare, Trash2, LayoutGrid, List, Star, MapPin, ExternalLink, Archive, RotateCcw, Calendar, DollarSign, Clock, GripVertical, PhoneCall, FileText } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, subWeeks, subMonths, startOfMonth, endOfMonth, startOfYear, startOfDay, endOfDay, isAfter, isBefore, parseISO, differenceInDays } from "date-fns";
@@ -346,6 +346,34 @@ const LeadProfileDialog = ({
                 </div>
               </div>
             </div>
+
+            {lead.website && (
+              <div className="p-6 bg-secondary/30 rounded-[2.5rem] border border-border/40 group hover:border-info/20 transition-all">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-2xl bg-info/10 flex items-center justify-center shrink-0 border border-info/10 group-hover:scale-110 transition-transform">
+                    <Globe className="h-5 w-5 text-info" />
+                  </div>
+                  <div className="space-y-0.5 min-w-0">
+                    <p className="text-[9px] uppercase font-black tracking-widest text-muted-foreground">Website</p>
+                    <a href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-foreground hover:text-info truncate block transition-colors">{lead.website}</a>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {lead.notes && (
+              <div className="p-6 bg-secondary/30 rounded-[2.5rem] border border-border/40 group hover:border-warning/20 transition-all">
+                <div className="flex items-start gap-4">
+                  <div className="h-12 w-12 rounded-2xl bg-warning/10 flex items-center justify-center shrink-0 border border-warning/10 group-hover:scale-110 transition-transform">
+                    <FileText className="h-6 w-6 text-warning" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">Observação</p>
+                    <p className="text-sm font-bold text-foreground leading-relaxed whitespace-pre-wrap">{lead.notes}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Status Change */}
