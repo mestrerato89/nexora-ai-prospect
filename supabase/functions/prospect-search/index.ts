@@ -194,7 +194,7 @@ async function geminiGroundedSearch(apiKey: string, niche: string, location: str
     query = `Liste ${maxResults} empresas reais de "${niche}" em "${location}", Brasil. Para cada uma: nome, endereço completo, telefone, website, avaliação Google, número de avaliações, horário. Use dados reais do Google.`;
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
   for (let attempt = 0; attempt < 2; attempt++) {
     const resp = await fetch(url, {
@@ -237,7 +237,7 @@ async function geminiStructure(apiKey: string, text: string, niche: string, loca
 DADOS DO GOOGLE:
 ${text}`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
   const resp = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -292,7 +292,7 @@ async function geminiKnowledgeSearch(apiKey: string, niche: string, location: st
   Foco: ${platform || "Negócios Locais"}. 
   Retorne dados estruturados. NUNCA invente nomes aleatórios (ex: "Barbearia 1"), use apenas nomes de empresas que você conhece ou que são comuns no Brasil para esse nicho.`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
   const resp = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

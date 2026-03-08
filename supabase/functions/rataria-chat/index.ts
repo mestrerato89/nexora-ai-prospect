@@ -32,7 +32,7 @@ Seja direto, profissional e focado em resultados. Responda em português brasile
     }));
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: {
@@ -46,14 +46,15 @@ Seja direto, profissional e focado em resultados. Responda em português brasile
     );
 
     if (!response.ok) {
+      const t = await response.text();
+      console.error("Gemini API error:", response.status, t);
+
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({ error: "Rate limit exceeded" }),
+          JSON.stringify({ error: "Rate limit exceeded. Too many requests to Gemini API.", details: t }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      const t = await response.text();
-      console.error("Gemini API error:", response.status, t);
       return new Response(
         JSON.stringify({ error: "AI gateway error", details: t }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
