@@ -61,7 +61,7 @@ export function MetricsGrid({ data }: { data: DashboardData }) {
         </p>
         <div className="flex items-center gap-4 mt-4 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
-            <Flame className="h-3 w-3 text-[hsl(var(--stat-icon-orange))]" /> {data.leadsQuentes} quentes
+            <Flame className="h-3 w-3 text-[hsl(var(--stat-icon-orange))]" /> {data.contatados} quentes
           </span>
           <span className="flex items-center gap-1">
             <CloudSnow className="h-3 w-3 text-warning" /> 0 mornos

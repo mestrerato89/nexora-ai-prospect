@@ -1,7 +1,16 @@
-import { Crosshair, Search, Trophy } from "lucide-react";
+import { Crosshair, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import type { DashboardData } from "@/pages/Index";
+
+const statusConfig = [
+  { key: "novos", label: "Novo", color: "text-blue-400" },
+  { key: "contatados", label: "Contatado", color: "text-purple-400" },
+  { key: "negociando", label: "Negociando", color: "text-yellow-400" },
+  { key: "pagos", label: "Pago", color: "text-emerald-400" },
+  { key: "remarketing", label: "Remarketing", color: "text-pink-400" },
+  { key: "perdidos", label: "Perdido", color: "text-red-400" },
+] as const;
 
 export function PipelineAndNichos({ data }: { data: DashboardData }) {
   const navigate = useNavigate();
@@ -24,17 +33,13 @@ export function PipelineAndNichos({ data }: { data: DashboardData }) {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-5 gap-2">
-            {(["novo", "contato", "proposta", "pago", "perdido"] as const).map((status) => {
-              const count = status === "novo" ? data.totalLeads - data.contatados - data.pagos - data.perdidos
-                : status === "contato" ? data.leadsQuentes
-                  : status === "proposta" ? data.contatados - data.leadsQuentes
-                    : status === "pago" ? data.pagos
-                      : data.perdidos;
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            {statusConfig.map((s) => {
+              const count = data[s.key as keyof DashboardData] as number;
               return (
-                <div key={status} className="text-center">
-                  <p className="text-2xl font-bold text-foreground">{Math.max(0, count)}</p>
-                  <p className="text-[10px] text-muted-foreground capitalize">{status}</p>
+                <div key={s.key} className="text-center">
+                  <p className={`text-2xl font-bold ${s.color}`}>{count}</p>
+                  <p className="text-[10px] text-muted-foreground">{s.label}</p>
                 </div>
               );
             })}

@@ -26,11 +26,13 @@ function getGreeting() {
 
 export interface DashboardData {
   totalLeads: number;
+  novos: number;
   leadsQuentes: number;
   contatados: number;
+  negociando: number;
   pagos: number;
+  remarketing: number;
   perdidos: number;
-  novos: number;
   proposta: number;
   withPhone: number;
   withWebsite: number;
@@ -47,8 +49,8 @@ export interface DashboardData {
 const Index = () => {
   const { user } = useAuth();
   const [data, setData] = useState<DashboardData>({
-    totalLeads: 0, leadsQuentes: 0, contatados: 0, pagos: 0, perdidos: 0,
-    novos: 0, proposta: 0,
+    totalLeads: 0, novos: 0, leadsQuentes: 0, contatados: 0, negociando: 0,
+    pagos: 0, remarketing: 0, perdidos: 0, proposta: 0,
     withPhone: 0, withWebsite: 0, avgRating: "—", pendingFollowUps: 0,
     overdueFollowUps: 0, topNiches: [], followUpsList: [], salesByDay: [],
     revenue: 0, pipelineValue: 0,
@@ -169,17 +171,26 @@ const Index = () => {
       const salesByDay = Object.entries(dayMap).map(([date, count]) => ({ date, count }));
 
       const revenue = filteredPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-      const pipelineValue = filteredLeads.filter(l => l.status === 'negociando').length * 1500; // Estimated ticket
+
+      // Count each status directly from CRM data
       const novos = filteredLeads.filter((l) => l.status === "novo").length;
+      const contatados = filteredLeads.filter((l) => l.status === "contatado").length;
       const negociando = filteredLeads.filter((l) => l.status === "negociando").length;
+      const pagos = filteredLeads.filter((l) => l.status === "pago").length;
+      const remarketing = filteredLeads.filter((l) => l.status === "remarketing").length;
+      const perdidos = filteredLeads.filter((l) => l.status === "perdido").length;
+      const pipelineValue = negociando * 1500; // Estimated ticket
 
       setData({
         totalLeads: filteredLeads.length,
-        leadsQuentes: filteredLeads.filter((l) => l.status === "contatado").length,
-        contatados: filteredLeads.filter((l) => l.status === "contatado" || l.status === "negociando").length,
-        pagos: filteredLeads.filter((l) => l.status === "pago").length,
-        perdidos: filteredLeads.filter((l) => l.status === "perdido").length,
-        novos, proposta: negociando,
+        novos,
+        leadsQuentes: contatados,
+        contatados,
+        negociando,
+        pagos,
+        remarketing,
+        perdidos,
+        proposta: negociando,
         withPhone: filteredLeads.filter((l) => l.has_phone).length,
         withWebsite: filteredLeads.filter((l) => l.has_website).length,
         avgRating,

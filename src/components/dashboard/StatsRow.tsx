@@ -1,4 +1,4 @@
-import { Users, Flame, Clock, UserCheck, TrendingUp, Star } from "lucide-react";
+import { Users, UserPlus, Phone, Handshake, UserCheck, TrendingUp, Star, RotateCcw } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { DashboardData } from "@/pages/Index";
 
@@ -43,15 +43,17 @@ function StatCard({ icon: Icon, label, value }: StatCardProps) {
 export function StatsRow({ data }: { data: DashboardData }) {
   const stats: StatCardProps[] = [
     { icon: Users, label: "Total Leads", value: String(data.totalLeads) },
-    { icon: Flame, label: "Leads Quentes", value: String(data.leadsQuentes) },
-    { icon: Clock, label: "Contatados", value: String(data.contatados) },
+    { icon: UserPlus, label: "Novos", value: String(data.novos) },
+    { icon: Phone, label: "Contatados", value: String(data.contatados) },
+    { icon: Handshake, label: "Negociando", value: String(data.negociando) },
     { icon: UserCheck, label: "Pagos", value: String(data.pagos) },
+    { icon: RotateCcw, label: "Remarketing", value: String(data.remarketing) },
     { icon: TrendingUp, label: "Pipeline", value: `R$ ${(data.pipelineValue / 1000).toFixed(1)}k` },
     { icon: Star, label: "Receita", value: `R$ ${(data.revenue / 1000).toFixed(1)}k` },
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
       {stats.map((stat) => (
         <StatCard key={stat.label} {...stat} />
       ))}

@@ -2,10 +2,12 @@ import { useNavigate } from "react-router-dom";
 import type { DashboardData } from "@/pages/Index";
 
 const stages = [
-  { key: "novos", label: "Novos", color: "bg-muted-foreground/20 text-muted-foreground" },
-  { key: "leadsQuentes", label: "Contato", color: "bg-info/20 text-info" },
-  { key: "proposta", label: "Proposta", color: "bg-warning/20 text-warning" },
-  { key: "pagos", label: "Pagos", color: "bg-primary/20 text-primary" },
+  { key: "novos", label: "Novos", color: "hsl(var(--info))" },
+  { key: "contatados", label: "Contatado", color: "hsl(var(--primary))" },
+  { key: "negociando", label: "Negociando", color: "hsl(38, 92%, 50%)" },
+  { key: "pagos", label: "Pagos", color: "hsl(142, 71%, 45%)" },
+  { key: "remarketing", label: "Remarketing", color: "hsl(330, 80%, 60%)" },
+  { key: "perdidos", label: "Perdido", color: "hsl(0, 72%, 51%)" },
 ] as const;
 
 export function PipelineFunnel({ data }: { data: DashboardData }) {
@@ -34,8 +36,8 @@ export function PipelineFunnel({ data }: { data: DashboardData }) {
               </div>
               <div className="h-2 bg-secondary rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all duration-500 ${s.color.split(" ")[0].replace("/20", "")}`}
-                  style={{ width: `${Math.max(pct, 2)}%`, backgroundColor: `hsl(var(--${s.color.includes("info") ? "info" : s.color.includes("warning") ? "warning" : s.color.includes("primary") ? "primary" : "muted-foreground"}))` }}
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${Math.max(pct, val > 0 ? 4 : 0)}%`, backgroundColor: s.color }}
                 />
               </div>
             </button>
