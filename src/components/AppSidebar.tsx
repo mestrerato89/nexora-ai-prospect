@@ -60,19 +60,49 @@ export function AppSidebar() {
   const [followUpCount, setFollowUpCount] = useState(0);
   const [projectCount, setProjectCount] = useState(0);
 
+  // Fetch initial count and listen for new leads (status 'novo')
   useEffect(() => {
     if (!user) return;
-    const fetchCounts = async () => {
-      const [leadsRes, fuRes, projRes] = await Promise.all([
-        supabase.from("leads").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "novo"),
+    const fetchCount = async () => {
+      const { count, error } = await supabase
+        .from('leads')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('status', 'novo');
+      if (!error) setLeadCount(count || 0);
+    };
+    fetchCount();
+
+    const channel = supabase
+      .channel('public:leads')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'leads'
+      }, (payload) => {
+        const newLead = payload.new;
+        if (newLead && newLead.user_id === user.id && newLead.status === 'novo') {
+          setLeadCount((prev) => prev + 1);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchOtherCounts = async () => {
+      const [fuRes, projRes] = await Promise.all([
         supabase.from("follow_ups").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("completed", false),
         supabase.from("projects" as any).select("id", { count: "exact", head: true }).eq("user_id", user.id),
       ]);
-      setLeadCount(leadsRes.count || 0);
       setFollowUpCount(fuRes.count || 0);
       setProjectCount(projRes.count || 0);
     };
-    fetchCounts();
+    fetchOtherCounts();
   }, [user]);
 
   const principalItems: MenuItem[] = [
