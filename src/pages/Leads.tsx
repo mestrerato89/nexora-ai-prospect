@@ -481,12 +481,12 @@ export default function Leads() {
     }
 
     // Fetch profiles separately (non-blocking, fire-and-forget)
-    supabase
+    Promise.resolve(supabase
       .from("profiles")
       .select("user_id, display_name, email")
       .then(({ data: profilesData }) => {
         if (profilesData) setProfiles(profilesData);
-      })
+      }))
       .catch((e) => console.error("Erro perfis:", e));
   };
 
@@ -507,6 +507,16 @@ export default function Leads() {
     });
     if (error) { toast.error(error.message); return; }
     toast.success("Lead adicionado!");
+
+    // Notificação de lead manual adicionado
+    const dataPoints = [newLead.phone && "📞 Tel", newLead.email && "📧 Email", newLead.website && "🌐 Site"].filter(Boolean);
+    await createNotification(
+      user.id,
+      `➕ Lead adicionado: ${newLead.name.trim()}`,
+      `Adicionado manualmente ao CRM${newLead.niche ? ` • Nicho: ${newLead.niche}` : ""}${dataPoints.length > 0 ? ` • ${dataPoints.join(", ")}` : " • Preencha mais dados para aumentar o score"}`,
+      'lead'
+    );
+
     setShowAdd(false);
     setNewLead({ name: "", email: "", phone: "", niche: "", city: "", state: "", website: "", address: "" });
     fetchLeads();
@@ -521,7 +531,6 @@ export default function Leads() {
       const hasPaymentInfo = (payRecords && payRecords.length > 0) || (subRecords && subRecords.length > 0);
 
       if (hasPaymentInfo) {
-        // Apenas muda o status localmente e no banco sem abrir o popup (evita duplicidade)
         setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, status } as Lead : l)));
         if (selectedLead?.id === id) {
           setSelectedLead((prev) => (prev ? ({ ...prev, status } as Lead) : null));
@@ -548,6 +557,26 @@ export default function Leads() {
     if (error) {
       toast.error("Erro ao atualizar status: " + error.message);
       return;
+    }
+
+    // Notificações inteligentes por transição de status
+    const lead = leads.find(l => l.id === id);
+    if (lead && user) {
+      const statusMessages: Record<string, { emoji: string; title: string; desc: string }> = {
+        contatado: { emoji: "📞", title: `Lead contatado: ${lead.name}`, desc: "Primeiro contato realizado! Lembre-se de agendar o follow-up." },
+        negociando: { emoji: "🤝", title: `Negociação aberta: ${lead.name}`, desc: "Lead em fase de negociação. Envie a proposta e acompanhe de perto!" },
+        remarketing: { emoji: "🔄", title: `Remarketing: ${lead.name}`, desc: "Lead voltou ao radar. Tente uma nova abordagem ou oferta especial." },
+        perdido: { emoji: "❌", title: `Lead perdido: ${lead.name}`, desc: "Não desanime! Analise o motivo e ajuste sua estratégia para os próximos." },
+      };
+      const msg = statusMessages[status];
+      if (msg) {
+        await createNotification(
+          user.id,
+          `${msg.emoji} ${msg.title}`,
+          msg.desc,
+          status === "perdido" ? 'system' : 'lead'
+        );
+      }
     }
   };
 
@@ -592,6 +621,23 @@ export default function Leads() {
     }
 
     if (successMsg) toast.success(successMsg);
+
+    // Notificação de pagamento/conversão
+    if (user) {
+      const totalValue = amountNum + (isRecurring ? recNum : 0);
+      const formattedValue = totalValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      const parts = [];
+      if (amountNum > 0) parts.push(`Venda: R$${amountNum.toFixed(2)}`);
+      if (isRecurring && recNum > 0) parts.push(`Recorrência: R$${recNum.toFixed(2)}/mês`);
+
+      await createNotification(
+        user.id,
+        `💰 Conversão! ${leadToPay.name} virou cliente`,
+        `${parts.join(" + ")} • Total: ${formattedValue}. Parabéns pela venda! 🎉`,
+        'payment'
+      );
+    }
+
     setLeadToPay(null);
   };
 

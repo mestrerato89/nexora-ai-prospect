@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Crosshair, Search, Loader2, Save, Wifi, ShieldCheck, MapPin, Instagram, Facebook, ShoppingBag, Sparkles, CheckCircle, Globe, Mail, Phone, MessageSquare, Trash2, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { createNotification } from "@/lib/notifications";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { SearchFilters } from "@/components/prospeccao/SearchFilters";
@@ -109,7 +110,7 @@ export default function Prospeccao() {
     }
   };
 
-  const saveLead = async (result: ProspectResult) => {
+  const saveLead = async (result: ProspectResult, skipNotification = false) => {
 
     const { error } = await supabase.from("leads").insert({
       user_id: null,
@@ -127,6 +128,18 @@ export default function Prospeccao() {
 
     setSaved((prev) => new Set([...prev, result.id]));
     toast.success(`${result.name} salvo no CRM!`);
+
+    // Notificação individual (não dispara em lote)
+    if (!skipNotification && user) {
+      const scoreEmoji = result.score >= 80 ? "🔥" : result.score >= 50 ? "⭐" : "📌";
+      await createNotification(
+        user.id,
+        `${scoreEmoji} Novo Lead: ${result.name}`,
+        `Score ${result.score}/100 • ${result.phone ? "📞 Com telefone" : "❌ Sem telefone"} • ${result.website ? "🌐 Com site" : "❌ Sem site"} • ${niche} em ${location}`,
+        'lead'
+      );
+    }
+
     return true;
   };
 
@@ -140,12 +153,24 @@ export default function Prospeccao() {
 
     let savedCount = 0;
     for (const r of unsaved) {
-      const ok = await saveLead(r);
+      const ok = await saveLead(r, true); // skip individual notifications
       if (ok) savedCount += 1;
     }
 
     if (savedCount > 0) {
       toast.success(`${savedCount} leads salvos!`);
+
+      // Notificação única de resumo para salvar em lote
+      if (user) {
+        const avgScore = Math.round(unsaved.reduce((a, r) => a + r.score, 0) / unsaved.length);
+        const hotLeads = unsaved.filter(r => r.score >= 80).length;
+        await createNotification(
+          user.id,
+          `🚀 ${savedCount} leads adicionados ao CRM!`,
+          `${niche} em ${location} • Score médio: ${avgScore}/100${hotLeads > 0 ? ` • ${hotLeads} leads quentes (80+) 🔥` : ""} • ${unsaved.filter(r => r.phone).length} com telefone • ${unsaved.filter(r => r.website).length} com site`,
+          'lead'
+        );
+      }
     }
   };
 

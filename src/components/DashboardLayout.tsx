@@ -114,8 +114,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               <Popover>
                 <PopoverTrigger asChild>
                   <button className="relative h-9 w-9 rounded-lg flex items-center justify-center hover:bg-muted transition-colors group">
-                    <Bell className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                    <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary" />
+                    <Bell className={`h-4 w-4 transition-colors ${unreadCount > 0 ? 'text-primary animate-bounce' : 'text-muted-foreground group-hover:text-primary'}`} />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-primary text-primary-foreground text-[9px] font-black flex items-center justify-center animate-pulse">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
                   </button>
                 </PopoverTrigger>
                 <PopoverContent align="end" className="w-80 bg-card border-primary/10 backdrop-blur-xl p-0 overflow-hidden shadow-2xl">
@@ -150,9 +154,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                         >
                           {!n.read && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary" />}
                           <div className="flex justify-between items-start mb-1 gap-4">
-                            <p className={`text-xs font-bold transition-colors ${!n.read ? 'text-foreground group-hover:text-primary' : 'text-muted-foreground'}`}>
-                              {n.title}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm shrink-0">
+                                {n.type === 'lead' ? '🎯' : n.type === 'payment' ? '💰' : n.type === 'follow_up' ? '📅' : '🔔'}
+                              </span>
+                              <p className={`text-xs font-bold transition-colors ${!n.read ? 'text-foreground group-hover:text-primary' : 'text-muted-foreground'}`}>
+                                {n.title}
+                              </p>
+                            </div>
                             <span className="text-[9px] text-muted-foreground whitespace-nowrap mt-0.5">
                               {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: ptBR })}
                             </span>
