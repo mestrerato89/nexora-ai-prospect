@@ -83,8 +83,7 @@ const Index = () => {
 
       const [leadsRes, followUpsRes, paymentsRes, profileRes] = await Promise.all([
         supabase.from("leads")
-          .select("*")
-          .eq("user_id", user.id),
+          .select("*"),
         supabase.from("follow_ups")
           .select("*")
           .eq("user_id", user.id)

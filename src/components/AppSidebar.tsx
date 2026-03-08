@@ -67,7 +67,6 @@ export function AppSidebar() {
       const { count, error } = await supabase
         .from('leads')
         .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
         .eq('status', 'novo');
       if (!error) setLeadCount(count || 0);
     };
@@ -81,7 +80,7 @@ export function AppSidebar() {
         table: 'leads'
       }, (payload) => {
         const newLead = payload.new;
-        if (newLead && newLead.user_id === user.id && newLead.status === 'novo') {
+        if (newLead && newLead.status === 'novo') {
           setLeadCount((prev) => prev + 1);
         }
       })
