@@ -29,21 +29,142 @@ import imgServicoLocal from "@/assets/sites/servico-local.jpg";
 import imgCoaching from "@/assets/sites/coaching.jpg";
 
 const NICHOS = [
-  { id: "infoproduto", title: "Infoproduto / Curso Digital", img: imgInfoproduto, category: "produto-digital", sections: ["Hero", "Benefícios", "Depoimentos", "Pricing", "FAQ"] },
-  { id: "curso-online", title: "Curso Online com Módulos", img: imgCursoOnline, category: "produto-digital", sections: ["Hero", "Módulos", "Instrutor", "Depoimentos", "FAQ", "CTA"] },
-  { id: "saas", title: "SaaS / Plataforma", img: imgSaas, category: "produto-digital", sections: ["Hero", "Features", "Pricing", "Depoimentos", "FAQ"] },
-  { id: "ebook", title: "E-book / Material Digital", img: imgEbook, category: "produto-digital", sections: ["Hero", "Conteúdo", "Autor", "Depoimentos", "CTA"] },
-  { id: "membership", title: "Membership / Assinatura", img: imgMembership, category: "produto-digital", sections: ["Hero", "Benefícios", "Pricing", "FAQ", "Contato"] },
-  { id: "mentoria", title: "Mentoria High-Ticket", img: imgMentoria, category: "servico-mentoria", sections: ["Hero VSL", "Resultados", "Depoimentos", "FAQ", "CTA"] },
-  { id: "consultoria", title: "Consultoria Online", img: imgConsultoria, category: "servico-mentoria", sections: ["Hero", "Serviços", "Cases", "Sobre", "Contato"] },
-  { id: "coaching", title: "Coaching / Programa de Transformação", img: imgCoaching, category: "servico-mentoria", sections: ["Hero VSL", "Transformação", "Depoimentos", "FAQ", "CTA"] },
-  { id: "servico-local", title: "Serviço Local / Autônomo", img: imgServicoLocal, category: "servico-mentoria", sections: ["Hero", "Serviços", "Galeria", "Depoimentos", "Contato"] },
-  { id: "ecommerce", title: "E-commerce / Loja Virtual", img: imgEcommerce, category: "produto-fisico", sections: ["Hero", "Produtos", "Categorias", "Depoimentos", "Footer"] },
-  { id: "barbearia", title: "Barbearia", img: imgBarbearia, category: "site-institucional", sections: ["Hero", "Serviços", "Galeria", "Agendamento", "Contato"] },
-  { id: "restaurante", title: "Restaurante", img: imgRestaurante, category: "site-institucional", sections: ["Hero", "Cardápio", "Galeria", "Reservas", "Contato"] },
-  { id: "clinica", title: "Clínica / Saúde", img: imgClinica, category: "site-institucional", sections: ["Hero", "Serviços", "Equipe", "Depoimentos", "Contato"] },
-  { id: "imobiliaria", title: "Imobiliária", img: imgImobiliaria, category: "site-institucional", sections: ["Hero", "Imóveis", "Busca", "Sobre", "Contato"] },
-  { id: "advocacia", title: "Advocacia", img: imgAdvocacia, category: "site-institucional", sections: ["Hero", "Áreas de Atuação", "Equipe", "Blog", "Contato"] },
+  {
+    id: "infoproduto", title: "Infoproduto / Curso Digital", img: imgInfoproduto, category: "produto-digital",
+    sections: ["Hero", "Benefícios", "Depoimentos", "Pricing", "FAQ"],
+    promptContext: `Hero H1: "Domine [Habilidade] e Transforme Sua Carreira em 30 Dias". CTA: "Quero Começar Agora!".
+Benefícios: Acesso vitalício, Certificado reconhecido, Suporte direto com mentor, Comunidade exclusiva de alunos.
+Depoimentos: "Saí do zero e hoje faturo R$10k/mês com freelancer após o curso" - João P., Designer. "O melhor investimento que fiz na carreira" - Maria S., Dev.
+Pricing: Plano Básico R$197, Plano Pro R$397, Plano VIP R$997 (com mentoria 1:1).
+Keywords SEO: curso online, infoproduto, curso digital, aula online, certificado, mentoria, transformação profissional.`
+  },
+  {
+    id: "curso-online", title: "Curso Online com Módulos", img: imgCursoOnline, category: "produto-digital",
+    sections: ["Hero", "Módulos", "Instrutor", "Depoimentos", "FAQ", "CTA"],
+    promptContext: `Hero H1: "Aprenda na Prática com Quem Já Formou +5.000 Alunos". CTA: "Garantir Minha Vaga".
+Módulos: Módulo 1 - Fundamentos (8 aulas), Módulo 2 - Prática Avançada (12 aulas), Módulo 3 - Projeto Final (6 aulas), Bônus - Masterclass Exclusiva.
+Instrutor: Bio com credenciais, anos de experiência, empresas onde trabalhou, número de alunos formados.
+Depoimentos: Depoimentos com foto + cargo + empresa + resultado mensurável.
+Keywords SEO: curso online, módulos, aulas práticas, certificado, formação completa, carreira.`
+  },
+  {
+    id: "saas", title: "SaaS / Plataforma", img: imgSaas, category: "produto-digital",
+    sections: ["Hero", "Features", "Pricing", "Depoimentos", "FAQ"],
+    promptContext: `Hero H1: "A Ferramenta que Empresas Usam para [Benefício Principal]". CTA: "Testar Grátis por 14 Dias".
+Features: Dashboard em tempo real, Automações inteligentes, Relatórios avançados com IA, API aberta para integrações, Multi-usuários com permissões.
+Pricing: Free (1 usuário), Pro R$97/mês (5 usuários), Enterprise sob consulta. Toggle mensal/anual com desconto.
+Depoimentos: "Reduzimos 60% do tempo operacional" - CEO TechCorp. "ROI de 300% no primeiro trimestre" - Dir. Marketing.
+Keywords SEO: plataforma, software, SaaS, automação, dashboard, produtividade, gestão, ferramenta online.`
+  },
+  {
+    id: "ebook", title: "E-book / Material Digital", img: imgEbook, category: "produto-digital",
+    sections: ["Hero", "Conteúdo", "Autor", "Depoimentos", "CTA"],
+    promptContext: `Hero H1: "O Guia Definitivo que Vai Transformar Seu [Área] — Baixe Agora Gratuitamente". CTA: "Baixar E-book Grátis".
+Conteúdo: Sumário visual com capítulos, número de páginas, prévia de 2-3 páginas, formato (PDF + ePub).
+Autor: Foto profissional + mini-bio + credenciais + "Por que eu escrevi este material".
+Formulário de captura: Nome + E-mail + botão "Quero Meu E-book". Urgência: "Oferta por tempo limitado".
+Keywords SEO: e-book grátis, guia prático, material digital, download, PDF, aprender, guia completo.`
+  },
+  {
+    id: "membership", title: "Membership / Assinatura", img: imgMembership, category: "produto-digital",
+    sections: ["Hero", "Benefícios", "Pricing", "FAQ", "Contato"],
+    promptContext: `Hero H1: "Acesse Conteúdo Premium Exclusivo Todos os Meses". CTA: "Assinar Agora".
+Benefícios: Conteúdo novo semanal, Lives exclusivas com experts, Comunidade VIP, Descontos em produtos, Acesso ao acervo completo.
+Pricing: Mensal R$49/mês, Semestral R$39/mês, Anual R$29/mês. Selo "Mais Popular" no semestral.
+FAQ: "Posso cancelar a qualquer momento?", "Como acesso o conteúdo?", "Tem garantia?".
+Keywords SEO: assinatura, membership, conteúdo exclusivo, comunidade, acesso premium.`
+  },
+  {
+    id: "mentoria", title: "Mentoria High-Ticket", img: imgMentoria, category: "servico-mentoria",
+    sections: ["Hero VSL", "Resultados", "Depoimentos", "FAQ", "CTA"],
+    promptContext: `Hero H1: "Pare de Tentar Sozinho. Acelere Seus Resultados com Mentoria Individual". CTA: "Agendar Minha Sessão Estratégica".
+VSL: Vídeo de vendas de 12-15min com depoimentos intercalados. Thumbnail com play button grande.
+Resultados: Cards com métricas reais — "Aluno X: de R$3k para R$25k/mês em 6 meses", "Aluna Y: 3x mais clientes em 90 dias".
+Escassez: "Apenas 10 vagas por trimestre", timer de countdown. Selo de garantia 30 dias.
+Keywords SEO: mentoria, coaching, high ticket, transformação, consultoria individual, resultados.`
+  },
+  {
+    id: "consultoria", title: "Consultoria Online", img: imgConsultoria, category: "servico-mentoria",
+    sections: ["Hero", "Serviços", "Cases", "Sobre", "Contato"],
+    promptContext: `Hero H1: "Consultoria Estratégica para Escalar Seu Negócio com Inteligência". CTA: "Solicitar Diagnóstico Gratuito".
+Serviços: Diagnóstico empresarial, Planejamento estratégico, Otimização de processos, Análise financeira, Mentoria para gestores.
+Cases: "Empresa X: +150% de faturamento em 12 meses", "Startup Y: de 2 para 15 colaboradores com processos otimizados".
+Sobre: Foto + bio + anos de experiência + empresas atendidas + certificações.
+Keywords SEO: consultoria, estratégia, negócios, planejamento, diagnóstico, escalar empresa.`
+  },
+  {
+    id: "coaching", title: "Coaching / Programa de Transformação", img: imgCoaching, category: "servico-mentoria",
+    sections: ["Hero VSL", "Transformação", "Depoimentos", "FAQ", "CTA"],
+    promptContext: `Hero H1: "O Programa de 12 Semanas que Vai Transformar Sua Vida e Carreira". CTA: "Quero Minha Transformação".
+Transformação: Timeline visual — Semana 1-4 (Autoconhecimento), Semana 5-8 (Planejamento), Semana 9-12 (Execução e Resultados).
+Depoimentos com antes/depois emocional (não físico): "Antes eu estava perdido, hoje lidero uma equipe de 20 pessoas".
+Garantia: "Se em 30 dias você não sentir evolução, devolvemos 100% do seu investimento".
+Keywords SEO: coaching, programa de transformação, desenvolvimento pessoal, carreira, liderança.`
+  },
+  {
+    id: "servico-local", title: "Serviço Local / Autônomo", img: imgServicoLocal, category: "servico-mentoria",
+    sections: ["Hero", "Serviços", "Galeria", "Depoimentos", "Contato"],
+    promptContext: `Hero H1: "Serviço Profissional com Qualidade e Pontualidade na Sua Região". CTA: "Solicitar Orçamento Grátis".
+Serviços: Cards com ícone + descrição + "A partir de R$X". Categorias: Instalação, Manutenção, Reforma, Consultoria.
+Galeria: Grid de fotos de trabalhos realizados (antes/depois quando aplicável).
+Contato: Formulário + WhatsApp flutuante + Mapa com área de atuação + Horário de funcionamento.
+Keywords SEO: serviço local, profissional, orçamento, [cidade], manutenção, instalação, autônomo.`
+  },
+  {
+    id: "ecommerce", title: "E-commerce / Loja Virtual", img: imgEcommerce, category: "produto-fisico",
+    sections: ["Hero", "Produtos", "Categorias", "Depoimentos", "Footer"],
+    promptContext: `Hero H1: "Sua Loja Virtual de Sucesso Começa Aqui — Venda Mais, Alcance Mais Clientes!". CTA: "Crie Sua Loja Agora".
+Produtos: Grid de 4-6 produtos com foto, nome, preço, botão "Ver Detalhes". Badges: "Mais Vendido", "Novo", "-20%".
+Categorias: Cards visuais — Eletrônicos, Moda, Casa & Decoração, Esportes. Ícone + miniatura + "Explorar".
+Benefícios: Frete grátis acima de R$199, Até 12x sem juros, Troca fácil em 30 dias, Compra 100% segura (SSL).
+Keywords SEO: loja virtual, e-commerce, comprar online, frete grátis, promoção, produtos.`
+  },
+  {
+    id: "barbearia", title: "Barbearia", img: imgBarbearia, category: "site-institucional",
+    sections: ["Hero", "Serviços", "Galeria", "Agendamento", "Contato"],
+    promptContext: `Hero H1: "Estilo e Precisão em Cada Corte — Agende Agora e Transforme Seu Visual". CTA: "Agendar Meu Horário".
+Serviços: Corte Degradê R$45, Corte Social R$35, Barba Completa R$30, Combo Corte+Barba R$65, Pigmentação R$50, Hot Towel R$25.
+Galeria: Mosaico de fotos de cortes realizados (degradê, fade, navalhado), ambiente da barbearia, equipe.
+Agendamento: Formulário com seleção de serviço + barbeiro + data/hora. Integração WhatsApp como alternativa.
+Depoimentos: "Melhor barbearia da região, atendimento 5 estrelas!" - Carlos M. / "Nunca mais fui em outro lugar" - Rafael S.
+Keywords SEO: barbearia, corte degradê, barba, agendamento, [bairro/cidade], barbeiro profissional.`
+  },
+  {
+    id: "restaurante", title: "Restaurante", img: imgRestaurante, category: "site-institucional",
+    sections: ["Hero", "Cardápio", "Galeria", "Reservas", "Contato"],
+    promptContext: `Hero H1: "Sabores Autênticos que Marcam — Reserve Sua Mesa e Viva Uma Experiência Gastronômica". CTA: "Reservar Mesa".
+Cardápio: Categorias — Entradas (R$18-35), Pratos Principais (R$45-89), Sobremesas (R$18-28), Carta de Vinhos. Design elegante com fotos.
+Galeria: Fotos profissionais dos pratos, ambiente do restaurante (salão, terraço, bar), equipe de cozinha.
+Reservas: Data + Hora + Nº de pessoas + Ocasião especial (aniversário, negócios). Confirmação por SMS/WhatsApp.
+Keywords SEO: restaurante, gastronomia, reserva, cardápio, [cuisine], [cidade], jantar, almoço executivo.`
+  },
+  {
+    id: "clinica", title: "Clínica / Saúde", img: imgClinica, category: "site-institucional",
+    sections: ["Hero", "Serviços", "Equipe", "Depoimentos", "Contato"],
+    promptContext: `Hero H1: "Cuidando da Sua Saúde com Excelência e Humanidade". CTA: "Agendar Consulta".
+Serviços: Clínico Geral, Dermatologia, Cardiologia, Ortopedia, exames laboratoriais, check-up. Cards com especialidade + descrição + "Agendar".
+Equipe: Cards de médicos — Foto profissional + Nome + CRM + Especialidade + Formação + Anos de experiência.
+Convênios: Logos dos convênios aceitos (Unimed, Amil, SulAmérica, Bradesco Saúde).
+Keywords SEO: clínica, médico, consulta, [especialidade], saúde, [cidade], convênio, agendamento.`
+  },
+  {
+    id: "imobiliaria", title: "Imobiliária", img: imgImobiliaria, category: "site-institucional",
+    sections: ["Hero", "Imóveis", "Busca", "Sobre", "Contato"],
+    promptContext: `Hero H1: "Encontre o Imóvel dos Seus Sonhos — Compra, Venda e Locação". CTA: "Ver Imóveis Disponíveis".
+Busca: Filtros — Tipo (Apartamento, Casa, Comercial), Finalidade (Compra, Aluguel), Faixa de preço, Quartos, Bairro.
+Imóveis em destaque: Cards com foto principal + preço + metragem + quartos + vagas + bairro + botão "Ver Detalhes".
+Sobre: Anos de atuação, imóveis no portfólio, clientes atendidos, CRECI.
+Keywords SEO: imobiliária, imóvel, apartamento, casa, alugar, comprar, [cidade], [bairro].`
+  },
+  {
+    id: "advocacia", title: "Advocacia", img: imgAdvocacia, category: "site-institucional",
+    sections: ["Hero", "Áreas de Atuação", "Equipe", "Blog", "Contato"],
+    promptContext: `Hero H1: "Advocacia Especializada — Defenda Seus Direitos com Quem Entende". CTA: "Consulta Inicial Gratuita".
+Áreas de Atuação: Direito Trabalhista, Direito Civil, Direito do Consumidor, Direito Empresarial, Direito de Família. Cards com ícone + descrição.
+Equipe: Advogados — Foto + OAB + Especialização + Experiência. Tom sóbrio e confiável.
+Blog: Artigos sobre direitos do consumidor, trabalhistas, mudanças na legislação. SEO para atrair leads orgânicos.
+Keywords SEO: advogado, advocacia, escritório de advocacia, [especialidade], [cidade], consulta jurídica, OAB.`
+  },
 ];
 
 const CATEGORIES = [
@@ -127,6 +248,9 @@ DADOS DO PROJETO:
 - Seções selecionadas: ${sections.join(", ")}
 - Keywords SEO: ${keywords || "Automáticas baseadas no nicho"}
 - Descrição adicional: ${description || "Site premium para o nicho"}
+
+CONTEXTO ESPECÍFICO DO NICHO (use estes dados OBRIGATORIAMENTE como base para headlines, CTAs, serviços e depoimentos):
+${selectedNiche?.promptContext || "Sem contexto adicional."}
 
 ESTRUTURA OBRIGATÓRIA DO DOCUMENTO (siga EXATAMENTE esta ordem):
 
