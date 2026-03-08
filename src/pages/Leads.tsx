@@ -258,10 +258,10 @@ const LeadProfileDialog = ({
 
   return (
     <Dialog open={!!selectedLead} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-card border-border max-w-lg shadow-2xl p-0 overflow-hidden rounded-[2.5rem]">
-        <div className="h-1.5 bg-gradient-to-r from-primary via-primary/50 to-transparent" />
+      <DialogContent className="bg-card border-border max-w-lg shadow-2xl p-0 overflow-hidden rounded-[2.5rem] w-full max-h-[95vh] flex flex-col">
+        <div className="h-1.5 shrink-0 bg-gradient-to-r from-primary via-primary/50 to-transparent" />
 
-        <div className="p-8 space-y-8">
+        <div className="p-6 md:p-8 space-y-6 md:space-y-8 overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-primary/10 hover:scrollbar-thumb-primary/20 scrollbar-track-transparent">
           <DialogHeader className="space-y-4">
             <div className="flex items-center justify-between">
               <Badge className={`${sc?.color || ""} border-0 text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-full shadow-lg shadow-primary/5`}>
