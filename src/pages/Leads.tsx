@@ -436,7 +436,7 @@ export default function Leads() {
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [view, setView] = useState<"kanban" | "list">("kanban");
-  const [newLead, setNewLead] = useState({ name: "", email: "", phone: "", niche: "", city: "", state: "", website: "", address: "" });
+  const [newLead, setNewLead] = useState({ name: "", email: "", phone: "", niche: "", city: "", state: "", website: "", address: "", notes: "" });
   const [draggedLead, setDraggedLead] = useState<string | null>(null);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showArchived, setShowArchived] = useState(false);
@@ -502,6 +502,7 @@ export default function Leads() {
       niche: newLead.niche || null,
       website: newLead.website || null,
       address: newLead.address || null,
+      notes: newLead.notes || null,
       has_phone: !!newLead.phone,
       has_website: !!newLead.website,
     });
@@ -518,7 +519,7 @@ export default function Leads() {
     );
 
     setShowAdd(false);
-    setNewLead({ name: "", email: "", phone: "", niche: "", city: "", state: "", website: "", address: "" });
+    setNewLead({ name: "", email: "", phone: "", niche: "", city: "", state: "", website: "", address: "", notes: "" });
     fetchLeads();
   };
 
@@ -774,6 +775,7 @@ export default function Leads() {
                     <div><Label>Email (Opcional)</Label><Input value={newLead.email} onChange={(e) => setNewLead({ ...newLead, email: e.target.value })} className="bg-secondary border-border" placeholder="email@exemplo.com" /></div>
                     <div><Label>Telefone (Opcional)</Label><Input value={newLead.phone} onChange={(e) => setNewLead({ ...newLead, phone: e.target.value })} className="bg-secondary border-border" placeholder="+55 21 99999-9999" /></div>
                   </div>
+                  <div><Label>Observação (Opcional)</Label><textarea value={newLead.notes} onChange={(e) => setNewLead({ ...newLead, notes: e.target.value })} className="flex min-h-[60px] w-full rounded-md bg-secondary border border-border px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50" placeholder="Informações adicionais sobre o lead..." /></div>
                   <Button onClick={addLead} className="w-full h-12 rounded-2xl font-bold">Criar Lead</Button>
                 </div>
               </DialogContent>
