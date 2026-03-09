@@ -94,7 +94,6 @@ const Index = () => {
           .limit(10),
         supabase.from("payments")
           .select("*")
-          .eq("user_id", user.id)
           .eq("status", "aprovado"),
         supabase.from("profiles")
           .select("display_name, role")

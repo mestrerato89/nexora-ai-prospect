@@ -963,111 +963,115 @@ const Finance = () => {
                             </Card>
 
                             <Card className="lg:col-span-2 rounded-[2.5rem] border-primary/10 bg-card/30 overflow-hidden">
-                                <TableHeader className="bg-muted/30">
-                                    <TableRow className="border-primary/5 hover:bg-transparent">
-                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 px-6">Lead / Cliente</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Responsável (BDR)</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Valor Liq.</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Comissionamento</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Status</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 text-right px-6">Ações</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredPayments.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={6} className="py-20 text-center text-muted-foreground opacity-50 italic">
-                                                Nenhum recebimento registrado neste mês. Altere a data no topo ou adicione o faturamento na lateral.
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : (
-                                        filteredPayments.map(p => (
-                                            <TableRow key={p.id} className="group hover:bg-primary/5 border-primary/5 transition-colors">
-                                                <TableCell className="py-6 px-6">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="p-2 bg-primary/10 rounded-xl group-hover:bg-primary/20 transition-colors">
-                                                            <Briefcase className="h-4 w-4 text-primary" />
-                                                        </div>
-                                                        <div className="flex flex-col">
-                                                            <span className="font-black text-sm">{p.lead_name}</span>
-                                                            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                                                <Calendar className="h-3 w-3" />
-                                                                {new Date(p.created_at).toLocaleDateString()}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="py-6">
-                                                    <Badge variant="outline" className="border-primary/20 bg-primary/5 text-primary text-[10px] font-black">{p.bdr_name}</Badge>
-                                                </TableCell>
-                                                <TableCell className="py-6">
-                                                    {p.status === 'pendente' ? (
-                                                        <div className="flex items-center gap-1">
-                                                            <span className="text-muted-foreground mr-1">R$</span>
-                                                            <Input
-                                                                type="number"
-                                                                className="h-8 w-24 bg-background/50 border-primary/20 text-xs font-black p-1 text-center rounded-lg"
-                                                                value={p.amount}
-                                                                onChange={async (e) => {
-                                                                    const val = Number(e.target.value);
-                                                                    setPayments(prev => prev.map(item => item.id === p.id ? { ...item, amount: val } : item));
-                                                                    await supabase.from('payments').update({ amount: val }).eq('id', p.id);
-                                                                }}
-                                                            />
-                                                        </div>
-                                                    ) : (
-                                                        <span className="font-black text-emerald-500">R$ {p.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell className="py-6">
-                                                    <div className="flex flex-col gap-2">
-                                                        <label className="flex items-center gap-2 text-[9px] font-bold text-muted-foreground uppercase cursor-pointer group/label">
-                                                            <div className="w-4 h-4 rounded-[4px] border border-primary/30 flex items-center justify-center bg-background/50 overflow-hidden">
-                                                                <input type="checkbox" className="w-full h-full appearance-none checked:bg-emerald-500 transition-colors" checked={p.include_bdr} onChange={async (e) => {
-                                                                    const val = e.target.checked;
-                                                                    setPayments(prev => prev.map(item => item.id === p.id ? { ...item, include_bdr: val } : item));
-                                                                    await supabase.from('payments').update({ include_bdr: val }).eq('id', p.id);
-                                                                }} disabled={p.status === 'aprovado'} />
-                                                            </div>
-                                                            <span className="group-hover/label:text-emerald-500 transition-colors">Comissão BDR (25%)</span>
-                                                        </label>
-                                                        <label className="flex items-center gap-2 text-[9px] font-bold text-muted-foreground uppercase cursor-pointer group/label">
-                                                            <div className="w-4 h-4 rounded-[4px] border border-primary/30 flex items-center justify-center bg-background/50 overflow-hidden">
-                                                                <input type="checkbox" className="w-full h-full appearance-none checked:bg-emerald-500 transition-colors" checked={p.include_head} onChange={async (e) => {
-                                                                    const val = e.target.checked;
-                                                                    setPayments(prev => prev.map(item => item.id === p.id ? { ...item, include_head: val } : item));
-                                                                    await supabase.from('payments').update({ include_head: val }).eq('id', p.id);
-                                                                }} disabled={p.status === 'aprovado'} />
-                                                            </div>
-                                                            <span className="group-hover/label:text-emerald-500 transition-colors">Comissão Head (25%)</span>
-                                                        </label>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="py-6">
-                                                    <Badge className={p.status === 'aprovado' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20"}>
-                                                        {p.status === 'aprovado' ? 'Validado' : 'Análise'}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="py-6 text-right px-6">
-                                                    <div className="flex justify-end gap-2">
-                                                        {p.status === 'pendente' && (
-                                                            <Button
-                                                                size="sm"
-                                                                className="h-8 bg-emerald-500 hover:bg-emerald-600 font-bold px-3 rounded-lg text-[10px] uppercase tracking-wider"
-                                                                onClick={() => approvePayment(p.id)}
-                                                            >
-                                                                Aprovar
-                                                            </Button>
-                                                        )}
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive active:scale-90 transition-all" onClick={() => removePayment(p.id)}>
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
+                                <div className="overflow-x-auto w-full">
+                                    <Table>
+                                        <TableHeader className="bg-muted/30">
+                                            <TableRow className="border-primary/5 hover:bg-transparent">
+                                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 px-6">Lead / Cliente</TableHead>
+                                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Responsável (BDR)</TableHead>
+                                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Valor Liq.</TableHead>
+                                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Comissionamento</TableHead>
+                                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Status</TableHead>
+                                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 text-right px-6">Ações</TableHead>
                                             </TableRow>
-                                        ))
-                                    )}
-                                </TableBody>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {filteredPayments.length === 0 ? (
+                                                <TableRow>
+                                                    <TableCell colSpan={6} className="py-20 text-center text-muted-foreground opacity-50 italic">
+                                                        Nenhum recebimento registrado neste mês. Altere a data no topo ou adicione o faturamento na lateral.
+                                                    </TableCell>
+                                                </TableRow>
+                                            ) : (
+                                                filteredPayments.map(p => (
+                                                    <TableRow key={p.id} className="group hover:bg-primary/5 border-primary/5 transition-colors">
+                                                        <TableCell className="py-6 px-6">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="p-2 bg-primary/10 rounded-xl group-hover:bg-primary/20 transition-colors">
+                                                                    <Briefcase className="h-4 w-4 text-primary" />
+                                                                </div>
+                                                                <div className="flex flex-col">
+                                                                    <span className="font-black text-sm">{p.lead_name}</span>
+                                                                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                                                        <Calendar className="h-3 w-3" />
+                                                                        {new Date(p.created_at).toLocaleDateString()}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="py-6">
+                                                            <Badge variant="outline" className="border-primary/20 bg-primary/5 text-primary text-[10px] font-black">{p.bdr_name}</Badge>
+                                                        </TableCell>
+                                                        <TableCell className="py-6">
+                                                            {p.status === 'pendente' ? (
+                                                                <div className="flex items-center gap-1">
+                                                                    <span className="text-muted-foreground mr-1">R$</span>
+                                                                    <Input
+                                                                        type="number"
+                                                                        className="h-8 w-24 bg-background/50 border-primary/20 text-xs font-black p-1 text-center rounded-lg"
+                                                                        value={p.amount}
+                                                                        onChange={async (e) => {
+                                                                            const val = Number(e.target.value);
+                                                                            setPayments(prev => prev.map(item => item.id === p.id ? { ...item, amount: val } : item));
+                                                                            await supabase.from('payments').update({ amount: val }).eq('id', p.id);
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            ) : (
+                                                                <span className="font-black text-emerald-500">R$ {p.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell className="py-6">
+                                                            <div className="flex flex-col gap-2">
+                                                                <label className="flex items-center gap-2 text-[9px] font-bold text-muted-foreground uppercase cursor-pointer group/label">
+                                                                    <div className="w-4 h-4 rounded-[4px] border border-primary/30 flex items-center justify-center bg-background/50 overflow-hidden">
+                                                                        <input type="checkbox" className="w-full h-full appearance-none checked:bg-emerald-500 transition-colors" checked={p.include_bdr} onChange={async (e) => {
+                                                                            const val = e.target.checked;
+                                                                            setPayments(prev => prev.map(item => item.id === p.id ? { ...item, include_bdr: val } : item));
+                                                                            await supabase.from('payments').update({ include_bdr: val }).eq('id', p.id);
+                                                                        }} disabled={p.status === 'aprovado'} />
+                                                                    </div>
+                                                                    <span className="group-hover/label:text-emerald-500 transition-colors">Comissão BDR (25%)</span>
+                                                                </label>
+                                                                <label className="flex items-center gap-2 text-[9px] font-bold text-muted-foreground uppercase cursor-pointer group/label">
+                                                                    <div className="w-4 h-4 rounded-[4px] border border-primary/30 flex items-center justify-center bg-background/50 overflow-hidden">
+                                                                        <input type="checkbox" className="w-full h-full appearance-none checked:bg-emerald-500 transition-colors" checked={p.include_head} onChange={async (e) => {
+                                                                            const val = e.target.checked;
+                                                                            setPayments(prev => prev.map(item => item.id === p.id ? { ...item, include_head: val } : item));
+                                                                            await supabase.from('payments').update({ include_head: val }).eq('id', p.id);
+                                                                        }} disabled={p.status === 'aprovado'} />
+                                                                    </div>
+                                                                    <span className="group-hover/label:text-emerald-500 transition-colors">Comissão Head (25%)</span>
+                                                                </label>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="py-6">
+                                                            <Badge className={p.status === 'aprovado' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20"}>
+                                                                {p.status === 'aprovado' ? 'Validado' : 'Análise'}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell className="py-6 text-right px-6">
+                                                            <div className="flex justify-end gap-2">
+                                                                {p.status === 'pendente' && (
+                                                                    <Button
+                                                                        size="sm"
+                                                                        className="h-8 bg-emerald-500 hover:bg-emerald-600 font-bold px-3 rounded-lg text-[10px] uppercase tracking-wider"
+                                                                        onClick={() => approvePayment(p.id)}
+                                                                    >
+                                                                        Aprovar
+                                                                    </Button>
+                                                                )}
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive active:scale-90 transition-all" onClick={() => removePayment(p.id)}>
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
                             </Card>
                         </motion.div>
                     </TabsContent>
@@ -1119,67 +1123,71 @@ const Finance = () => {
                                         </Badge>
                                     </CardTitle>
                                 </CardHeader>
-                                <TableHeader className="bg-muted/30">
-                                    <TableRow className="border-indigo-500/5 hover:bg-transparent">
-                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 px-6">Cliente</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Vínculo Inicial</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Fatura (R$)</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Status ({selectedMonth})</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 text-right px-6">Ações</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {faturasDoMes.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={5} className="py-20 text-center text-muted-foreground opacity-50 italic">
-                                                Nenhuma fatura de recorrência gerada para o mês selecionado.
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : (
-                                        faturasDoMes.map((fatura, idx) => (
-                                            <TableRow key={fatura.subscription.id + idx} className="group hover:bg-indigo-500/5 border-indigo-500/5 transition-colors">
-                                                <TableCell className="py-6 px-6">
-                                                    <span className="font-black text-sm">{fatura.subscription.lead_name}</span>
-                                                </TableCell>
-                                                <TableCell className="py-6">
-                                                    <span className="text-xs font-bold text-muted-foreground font-mono">{new Date(fatura.subscription.start_date || fatura.subscription.created_at).toLocaleDateString()}</span>
-                                                </TableCell>
-                                                <TableCell className="py-6">
-                                                    <span className="font-black text-indigo-500">R$ {fatura.subscription.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                                                </TableCell>
-                                                <TableCell className="py-6">
-                                                    {fatura.status === 'pago' && <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">Fatura Paga</Badge>}
-                                                    {fatura.status === 'analise' && <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20">Em Análise</Badge>}
-                                                    {fatura.status === 'aberto' && <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">Em Aberto</Badge>}
-                                                    {fatura.status === 'pendente' && <Badge className="bg-indigo-500/10 text-indigo-500 border-indigo-500/20">Pendente</Badge>}
-                                                    {fatura.status === 'atrasado' && <Badge className="bg-destructive/10 text-destructive border-destructive/20">Atrasado</Badge>}
-                                                    {fatura.status === 'cancelado_historico' && <Badge className="bg-muted text-muted-foreground border-border">Cancelado</Badge>}
-                                                </TableCell>
-                                                <TableCell className="py-6 text-right px-6">
-                                                    <div className="flex justify-end gap-2">
-                                                        {(fatura.status === 'aberto' || fatura.status === 'pendente' || fatura.status === 'atrasado') && (
-                                                            <Button
-                                                                size="sm"
-                                                                className="text-[10px] font-black tracking-widest uppercase bg-indigo-500 hover:bg-indigo-600 text-white h-8 px-4 border-0 rounded-xl"
-                                                                onClick={() => handlePayFatura(fatura)}
-                                                            >
-                                                                Mapear Pagamento
-                                                            </Button>
-                                                        )}
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className={`text-[10px] font-bold tracking-widest uppercase hover:bg-background/50 h-8 px-4 border rounded-xl ${fatura.subscription.status === 'ativo' ? 'text-destructive border-destructive/20 hover:text-destructive' : 'text-emerald-500 border-emerald-500/20 hover:text-emerald-500'}`}
-                                                            onClick={() => toggleSubscriptionStatus(fatura.subscription.id, fatura.subscription.status === 'ativo' ? 'cancelado' : 'ativo')}
-                                                        >
-                                                            {fatura.subscription.status === 'ativo' ? 'Suspender' : 'Reativar'}
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
+                                <div className="overflow-x-auto w-full">
+                                    <Table>
+                                        <TableHeader className="bg-muted/30">
+                                            <TableRow className="border-indigo-500/5 hover:bg-transparent">
+                                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 px-6">Cliente</TableHead>
+                                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Vínculo Inicial</TableHead>
+                                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Fatura (R$)</TableHead>
+                                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Status ({selectedMonth})</TableHead>
+                                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 text-right px-6">Ações</TableHead>
                                             </TableRow>
-                                        ))
-                                    )}
-                                </TableBody>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {faturasDoMes.length === 0 ? (
+                                                <TableRow>
+                                                    <TableCell colSpan={5} className="py-20 text-center text-muted-foreground opacity-50 italic">
+                                                        Nenhuma fatura de recorrência gerada para o mês selecionado.
+                                                    </TableCell>
+                                                </TableRow>
+                                            ) : (
+                                                faturasDoMes.map((fatura, idx) => (
+                                                    <TableRow key={fatura.subscription.id + idx} className="group hover:bg-indigo-500/5 border-indigo-500/5 transition-colors">
+                                                        <TableCell className="py-6 px-6">
+                                                            <span className="font-black text-sm">{fatura.subscription.lead_name}</span>
+                                                        </TableCell>
+                                                        <TableCell className="py-6">
+                                                            <span className="text-xs font-bold text-muted-foreground font-mono">{new Date(fatura.subscription.start_date || fatura.subscription.created_at).toLocaleDateString()}</span>
+                                                        </TableCell>
+                                                        <TableCell className="py-6">
+                                                            <span className="font-black text-indigo-500">R$ {fatura.subscription.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                        </TableCell>
+                                                        <TableCell className="py-6">
+                                                            {fatura.status === 'pago' && <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">Fatura Paga</Badge>}
+                                                            {fatura.status === 'analise' && <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20">Em Análise</Badge>}
+                                                            {fatura.status === 'aberto' && <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">Em Aberto</Badge>}
+                                                            {fatura.status === 'pendente' && <Badge className="bg-indigo-500/10 text-indigo-500 border-indigo-500/20">Pendente</Badge>}
+                                                            {fatura.status === 'atrasado' && <Badge className="bg-destructive/10 text-destructive border-destructive/20">Atrasado</Badge>}
+                                                            {fatura.status === 'cancelado_historico' && <Badge className="bg-muted text-muted-foreground border-border">Cancelado</Badge>}
+                                                        </TableCell>
+                                                        <TableCell className="py-6 text-right px-6">
+                                                            <div className="flex justify-end gap-2">
+                                                                {(fatura.status === 'aberto' || fatura.status === 'pendente' || fatura.status === 'atrasado') && (
+                                                                    <Button
+                                                                        size="sm"
+                                                                        className="text-[10px] font-black tracking-widest uppercase bg-indigo-500 hover:bg-indigo-600 text-white h-8 px-4 border-0 rounded-xl"
+                                                                        onClick={() => handlePayFatura(fatura)}
+                                                                    >
+                                                                        Mapear Pagamento
+                                                                    </Button>
+                                                                )}
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className={`text-[10px] font-bold tracking-widest uppercase hover:bg-background/50 h-8 px-4 border rounded-xl ${fatura.subscription.status === 'ativo' ? 'text-destructive border-destructive/20 hover:text-destructive' : 'text-emerald-500 border-emerald-500/20 hover:text-emerald-500'}`}
+                                                                    onClick={() => toggleSubscriptionStatus(fatura.subscription.id, fatura.subscription.status === 'ativo' ? 'cancelado' : 'ativo')}
+                                                                >
+                                                                    {fatura.subscription.status === 'ativo' ? 'Suspender' : 'Reativar'}
+                                                                </Button>
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
                             </Card>
                         </motion.div>
                     </TabsContent>
@@ -1244,54 +1252,58 @@ const Finance = () => {
                             </Card>
 
                             <Card className="lg:col-span-3 rounded-[2.5rem] border-primary/10 bg-card/30 overflow-hidden">
-                                <TableHeader className="bg-muted/30">
-                                    <TableRow className="border-primary/5 hover:bg-transparent">
-                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 px-6">Tipo / Nome</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Descrição</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Data</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Valor</TableHead>
-                                        <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 text-right px-6">Ações</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredExpenses.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={5} className="py-20 text-center text-muted-foreground opacity-50 italic">
-                                                Nenhuma despesa lançada neste mês. Use o formulário à esquerda.
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : (
-                                        filteredExpenses.map(e => (
-                                            <TableRow key={e.id} className="group hover:bg-destructive/5 border-primary/5 transition-colors">
-                                                <TableCell className="py-6 px-6">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={`p-2 rounded-xl group-hover:scale-110 transition-transform ${e.type === 'fixo' ? 'bg-destructive/10 text-destructive' : 'bg-amber-500/10 text-amber-500'}`}>
-                                                            {e.type === 'fixo' ? <ArrowDownCircle className="h-4 w-4" /> : <TrendingUp className="h-4 w-4" />}
-                                                        </div>
-                                                        <div className="flex flex-col">
-                                                            <span className="font-black text-sm">{e.name}</span>
-                                                            <span className={`text-[8px] font-black uppercase tracking-widest ${e.type === 'fixo' ? 'text-destructive/60' : 'text-amber-500/60'}`}>{e.type}</span>
-                                                        </div>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="py-6">
-                                                    <span className="text-xs font-medium text-muted-foreground line-clamp-1">{e.description || "---"}</span>
-                                                </TableCell>
-                                                <TableCell className="py-6">
-                                                    <span className="text-xs font-bold text-muted-foreground font-mono">{new Date(e.date).toLocaleDateString()}</span>
-                                                </TableCell>
-                                                <TableCell className="py-6">
-                                                    <span className="font-black text-destructive">R$ {e.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                                                </TableCell>
-                                                <TableCell className="py-6 text-right px-6">
-                                                    <Button variant="ghost" size="icon" className="rounded-xl hover:bg-destructive/10 hover:text-destructive active:scale-90 transition-all" onClick={() => removeExpense(e.id)}>
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </TableCell>
+                                <div className="overflow-x-auto w-full">
+                                    <Table>
+                                        <TableHeader className="bg-muted/30">
+                                            <TableRow className="border-primary/5 hover:bg-transparent">
+                                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 px-6">Tipo / Nome</TableHead>
+                                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Descrição</TableHead>
+                                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Data</TableHead>
+                                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-6">Valor</TableHead>
+                                                <TableHead className="text-[10px] font-black uppercase tracking-widest py-6 text-right px-6">Ações</TableHead>
                                             </TableRow>
-                                        ))
-                                    )}
-                                </TableBody>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {filteredExpenses.length === 0 ? (
+                                                <TableRow>
+                                                    <TableCell colSpan={5} className="py-20 text-center text-muted-foreground opacity-50 italic">
+                                                        Nenhuma despesa lançada neste mês. Use o formulário à esquerda.
+                                                    </TableCell>
+                                                </TableRow>
+                                            ) : (
+                                                filteredExpenses.map(e => (
+                                                    <TableRow key={e.id} className="group hover:bg-destructive/5 border-primary/5 transition-colors">
+                                                        <TableCell className="py-6 px-6">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className={`p-2 rounded-xl group-hover:scale-110 transition-transform ${e.type === 'fixo' ? 'bg-destructive/10 text-destructive' : 'bg-amber-500/10 text-amber-500'}`}>
+                                                                    {e.type === 'fixo' ? <ArrowDownCircle className="h-4 w-4" /> : <TrendingUp className="h-4 w-4" />}
+                                                                </div>
+                                                                <div className="flex flex-col">
+                                                                    <span className="font-black text-sm">{e.name}</span>
+                                                                    <span className={`text-[8px] font-black uppercase tracking-widest ${e.type === 'fixo' ? 'text-destructive/60' : 'text-amber-500/60'}`}>{e.type}</span>
+                                                                </div>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="py-6">
+                                                            <span className="text-xs font-medium text-muted-foreground line-clamp-1">{e.description || "---"}</span>
+                                                        </TableCell>
+                                                        <TableCell className="py-6">
+                                                            <span className="text-xs font-bold text-muted-foreground font-mono">{new Date(e.date).toLocaleDateString()}</span>
+                                                        </TableCell>
+                                                        <TableCell className="py-6">
+                                                            <span className="font-black text-destructive">R$ {e.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                                        </TableCell>
+                                                        <TableCell className="py-6 text-right px-6">
+                                                            <Button variant="ghost" size="icon" className="rounded-xl hover:bg-destructive/10 hover:text-destructive active:scale-90 transition-all" onClick={() => removeExpense(e.id)}>
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
                             </Card>
                         </motion.div>
                     </TabsContent>
