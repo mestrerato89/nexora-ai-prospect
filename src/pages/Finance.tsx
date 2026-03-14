@@ -259,11 +259,11 @@ const Finance = () => {
 
     // Commission logic based on the actual profit divided between parties
     // Head: 25% of the Net Profit
-    // BDR:  25% of the Net Profit
-    // Comp: 50% of the Net Profit
+    // BDR:  33% of the Net Profit
+    // Comp: 42% of the Net Profit
     const headPayout = netProfit * 0.25;
-    const bdrPayout = netProfit * 0.25;
-    const companyRetention = netProfit * 0.50;
+    const bdrPayout = netProfit * 0.33;
+    const companyRetention = netProfit * 0.42;
 
     // BDR Performance Summary
     const bdrSummaries = users.map(u => {
@@ -580,7 +580,7 @@ const Finance = () => {
                                             <div>
                                                 <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1">Comissão BDR</p>
                                                 <p className="text-xl font-black text-emerald-500">R$ {bdrPayout.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                                                <Badge variant="outline" className="mt-2 text-[8px] bg-emerald-500/10 border-emerald-500/20 text-emerald-500 uppercase">25% do Lucro Líquido</Badge>
+                                                <Badge variant="outline" className="mt-2 text-[8px] bg-emerald-500/10 border-emerald-500/20 text-emerald-500 uppercase">33% do Lucro Líquido</Badge>
                                             </div>
                                         </div>
                                         <div className="space-y-3 text-center p-6 rounded-3xl bg-secondary/20 border border-border group hover:bg-secondary/30 transition-all">
@@ -588,7 +588,7 @@ const Finance = () => {
                                             <div>
                                                 <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1">Empresa</p>
                                                 <p className="text-xl font-black">R$ {companyRetention.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                                                <Badge variant="outline" className="mt-2 text-[8px] border-border uppercase">50% do Lucro Líquido</Badge>
+                                                <Badge variant="outline" className="mt-2 text-[8px] border-border uppercase">42% do Lucro Líquido</Badge>
                                             </div>
                                         </div>
                                     </div>
