@@ -7,7 +7,10 @@ import {
     ShieldCheck,
     MoreHorizontal,
     Clock,
-    Trash2
+    Trash2,
+    Eye,
+    EyeOff,
+    Zap
 } from "lucide-react";
 import {
     Table,
@@ -90,6 +93,25 @@ const Admin = () => {
             toast.error("Erro ao atualizar cargo", { description: error.message });
         }
     };
+
+    const handleUpdatePermission = async (userId: string, currentPermission: boolean) => {
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ can_view_all_leads: !currentPermission } as any)
+                .eq('user_id', userId);
+
+            if (error) throw error;
+
+            toast.success(`Permissão atualizada!`, {
+                description: !currentPermission ? "Agora o usuário pode ver todos os leads." : "Agora o usuário vê apenas os próprios leads."
+            });
+            fetchUsers();
+        } catch (error: any) {
+            toast.error("Erro ao atualizar permissão", { description: error.message });
+        }
+    };
+
 
     const handleResetPassword = async (email: string) => {
         try {
@@ -203,6 +225,7 @@ const Admin = () => {
                                     <TableHead className="text-xs uppercase tracking-wider py-4">Funcionário</TableHead>
                                     <TableHead className="text-xs uppercase tracking-wider py-4">Cargo</TableHead>
                                     <TableHead className="text-xs uppercase tracking-wider py-4">Status</TableHead>
+                                    <TableHead className="text-xs uppercase tracking-wider py-4 text-center">Visão</TableHead>
                                     <TableHead className="text-xs uppercase tracking-wider py-4">Membro desde</TableHead>
                                     <TableHead className="text-right text-xs uppercase tracking-wider py-4">Ações</TableHead>
                                 </TableRow>
@@ -230,6 +253,19 @@ const Admin = () => {
                                                 {employee.display_name ? 'ATIVO' : 'PENDENTE'}
                                             </span>
                                         </TableCell>
+                                        <TableCell className="text-center">
+                                            <div className="flex flex-col items-center gap-1">
+                                                {employee.can_view_all_leads ? (
+                                                    <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 transition-all cursor-default flex items-center gap-1 text-[9px] font-black uppercase">
+                                                        <Eye className="h-3 w-3" /> Total
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="outline" className="text-muted-foreground border-border flex items-center gap-1 text-[9px] font-black uppercase">
+                                                        <EyeOff className="h-3 w-3" /> Privada
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        </TableCell>
                                         <TableCell className="text-sm font-medium opacity-70">
                                             {new Date(employee.created_at).toLocaleDateString()}
                                         </TableCell>
@@ -250,6 +286,16 @@ const Admin = () => {
                                                         BDR (Prospector)
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
+                                                    <DropdownMenuLabel className="text-[10px] uppercase text-muted-foreground">Permissões:</DropdownMenuLabel>
+                                                    <DropdownMenuItem onClick={() => handleUpdatePermission(employee.user_id, employee.can_view_all_leads)} className="font-bold">
+                                                        {employee.can_view_all_leads ? (
+                                                            <span className="flex items-center gap-2 text-amber-500"><EyeOff className="h-4 w-4" /> Restringir para Leads Próprios</span>
+                                                        ) : (
+                                                            <span className="flex items-center gap-2 text-emerald-500"><Eye className="h-4 w-4" /> Liberar Visão de Todos os Leads</span>
+                                                        )}
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+
                                                     <DropdownMenuItem onClick={() => handleResetPassword(employee.email)}>
                                                         Resetar Senha
                                                     </DropdownMenuItem>

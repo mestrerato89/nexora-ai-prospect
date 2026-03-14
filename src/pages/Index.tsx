@@ -47,7 +47,7 @@ export interface DashboardData {
 }
 
 const Index = () => {
-  const { user } = useAuth();
+  const { user, canViewAllLeads } = useAuth();
   const [data, setData] = useState<DashboardData>({
     totalLeads: 0, novos: 0, leadsQuentes: 0, contatados: 0, negociando: 0,
     pagos: 0, remarketing: 0, perdidos: 0, proposta: 0,
@@ -83,18 +83,25 @@ const Index = () => {
         end = new Date(customRange.to + "T23:59:59");
       }
 
+      let leadsQuery = supabase.from("leads").select("*");
+      if (!canViewAllLeads) {
+        leadsQuery = leadsQuery.eq("user_id", user.id);
+      }
+
+      let paymentsQuery = supabase.from("payments").select("*").eq("status", "aprovado");
+      if (!canViewAllLeads) {
+        paymentsQuery = paymentsQuery.eq("user_id", user.id);
+      }
+
       const [leadsRes, followUpsRes, paymentsRes, profileRes] = await Promise.all([
-        supabase.from("leads")
-          .select("*"),
+        leadsQuery,
         supabase.from("follow_ups")
           .select("*")
           .eq("user_id", user.id)
           .eq("completed", false)
           .order("due_date", { ascending: true })
           .limit(10),
-        supabase.from("payments")
-          .select("*")
-          .eq("status", "aprovado"),
+        paymentsQuery,
         supabase.from("profiles")
           .select("display_name, role")
           .eq("user_id", user.id)

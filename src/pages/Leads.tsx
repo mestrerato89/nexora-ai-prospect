@@ -453,7 +453,7 @@ const LeadProfileDialog = ({
 // --- Main Component ---
 
 export default function Leads() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, canViewAllLeads } = useAuth();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -484,11 +484,14 @@ export default function Leads() {
     setLoading(true);
 
     try {
-      // Agora o CRM é compartilhado: todos os usuários veem todos os leads
-      const { data, error } = await supabase
-        .from("leads")
-        .select("*")
-        .order("created_at", { ascending: false });
+      // Agora o CRM é compartilhado seguindo as permissões:
+      let query = supabase.from("leads").select("*");
+
+      if (!canViewAllLeads) {
+        query = query.eq("user_id", user.id);
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false });
 
       if (error) {
         console.error("Erro Supabase:", error);
@@ -515,7 +518,7 @@ export default function Leads() {
       .catch((e) => console.error("Erro perfis:", e));
   };
 
-  useEffect(() => { fetchLeads(); }, [user, isAdmin]);
+  useEffect(() => { fetchLeads(); }, [user, isAdmin, canViewAllLeads]);
 
   const addLead = async () => {
     if (!user || !newLead.name.trim()) { toast.error("Nome é obrigatório"); return; }

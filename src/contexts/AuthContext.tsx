@@ -6,6 +6,7 @@ import { toast } from "sonner";
 interface AuthContextType {
   user: User | null;
   isAdmin: boolean;
+  canViewAllLeads: boolean;
   loading: boolean;
   signOut: () => Promise<void>;
 }
@@ -13,6 +14,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isAdmin: false,
+  canViewAllLeads: false,
   loading: true,
   signOut: async () => { },
 });
@@ -22,6 +24,7 @@ export const useAuth = () => useContext(AuthContext);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [canViewAllLeads, setCanViewAllLeads] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -47,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         checkAdminRole(currentUser).catch(console.error);
       } else {
         setIsAdmin(false);
+        setCanViewAllLeads(false);
       }
 
       setLoading(false);
@@ -68,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // First check: special admin email
     if (currentUser.email === "huguinhoask@gmail.com") {
       setIsAdmin(true);
+      setCanViewAllLeads(true);
       // Also ensure the profile exists
       ensureProfileExists(currentUser);
       return;
@@ -100,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setIsAdmin(false);
       }
+      setCanViewAllLeads((data as any)?.can_view_all_leads || (data as any)?.role === 'admin');
     } catch (err) {
       console.error("Error checking role:", err);
       setIsAdmin(false);
@@ -141,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Still clear local state as a fallback
       setUser(null);
       setIsAdmin(false);
+      setCanViewAllLeads(false);
       window.location.href = "/login";
     } finally {
       setLoading(false);
@@ -148,7 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAdmin, loading, signOut }}>
+    <AuthContext.Provider value={{ user, isAdmin, canViewAllLeads, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );
