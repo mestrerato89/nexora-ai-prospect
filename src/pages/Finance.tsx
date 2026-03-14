@@ -258,12 +258,12 @@ const Finance = () => {
     const netProfit = profitBeforeCommissions > 0 ? profitBeforeCommissions : 0; // The true cash pool for profit sharing
 
     // Commission logic based on the actual profit divided between parties
-    // Head: 25% of the Net Profit
+    // Head: 17% of the Net Profit
     // BDR:  33% of the Net Profit
-    // Comp: 42% of the Net Profit
-    const headPayout = netProfit * 0.25;
+    // Comp: 50% of the Net Profit
+    const headPayout = netProfit * 0.17;
     const bdrPayout = netProfit * 0.33;
-    const companyRetention = netProfit * 0.42;
+    const companyRetention = netProfit * 0.50;
 
     // BDR Performance Summary
     const bdrSummaries = users.map(u => {
@@ -572,7 +572,7 @@ const Finance = () => {
                                             <div>
                                                 <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1">Head Op.</p>
                                                 <p className="text-xl font-black">R$ {headPayout.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                                                <Badge variant="outline" className="mt-2 text-[8px] border-primary/20 uppercase">25% do Lucro Líquido</Badge>
+                                                <Badge variant="outline" className="mt-2 text-[8px] border-primary/20 uppercase">17% do Lucro Líquido</Badge>
                                             </div>
                                         </div>
                                         <div className="space-y-3 text-center p-6 rounded-3xl bg-emerald-500/5 border border-emerald-500/10 group hover:bg-emerald-500/10 transition-all scale-110 shadow-2xl shadow-emerald-500/5 ring-1 ring-emerald-500/20">
@@ -588,7 +588,7 @@ const Finance = () => {
                                             <div>
                                                 <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1">Empresa</p>
                                                 <p className="text-xl font-black">R$ {companyRetention.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                                                <Badge variant="outline" className="mt-2 text-[8px] border-border uppercase">42% do Lucro Líquido</Badge>
+                                                <Badge variant="outline" className="mt-2 text-[8px] border-border uppercase">50% do Lucro Líquido</Badge>
                                             </div>
                                         </div>
                                     </div>
