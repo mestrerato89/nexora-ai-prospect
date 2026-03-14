@@ -50,6 +50,19 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    const cleanupOldNotifications = async () => {
+      if (!user) return;
+      const threeDaysAgo = new Date();
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      
+      await (supabase as any)
+        .from('notifications')
+        .delete()
+        .eq('user_id', user.id)
+        .lt('created_at', threeDaysAgo.toISOString());
+    };
+
+    cleanupOldNotifications();
     fetchNotifications();
 
     if (!user) return;
